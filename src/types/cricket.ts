@@ -13,6 +13,20 @@ export type UserProfile = {
     wickets: number;
     highScore: number;
     bestBowling: string;
+    /** Batting strike rate: (runs / ballsFaced) * 100 */
+    strikeRate?: number;
+    /** Bowling economy rate: runs conceded per over */
+    economyRate?: number;
+    /** Total balls faced as batter */
+    totalBalls?: number;
+    /** Total balls bowled */
+    totalBallsBowled?: number;
+    /** Current consecutive win streak */
+    winStreak?: number;
+    /** Longest ever win streak */
+    longestWinStreak?: number;
+    /** ELO rating for matchmaking */
+    elo?: number;
   };
 };
 
@@ -49,17 +63,32 @@ export type BallAction = {
   length?: Length;
 };
 
-export type DismissalType = 'Bowled' | 'Caught' | 'LBW' | 'Run Out' | 'Stumped' | 'Hit Wicket' | null;
+export type DismissalType =
+  | 'Bowled'
+  | 'Caught'
+  | 'Caught Behind'
+  | 'LBW'
+  | 'Run Out'
+  | 'Stumped'
+  | 'Hit Wicket'
+  | null;
 
 export type BallOutcome = {
   runs: number; // 0-6
   wicket: boolean;
   dismissalType: DismissalType;
   commentary: string;
-  special: 'SIX' | 'FOUR' | 'WICKET' | 'DOT' | null;
+  special: 'SIX' | 'FOUR' | 'WICKET' | 'DOT' | 'WIDE' | null;
   timestamp: number;
   isNoBall?: boolean;
+  isWide?: boolean;
   isFreeHit?: boolean;
+};
+
+/** Partnership tracking for innings */
+export type Partnership = {
+  runs: number;
+  balls: number;
 };
 
 export type InningsState = {
@@ -71,12 +100,38 @@ export type InningsState = {
   ballLog: Array<BallOutcome & BallAction>;
   currentBall: BallAction;
   isFreeHitNextBall?: boolean;
+  /** Run rate at end of each completed over */
+  runRateByOver?: number[];
+  /** Boundary count tracking */
+  boundaryCount?: { fours: number; sixes: number };
+  /** Current consecutive dot balls */
+  dotBallStreak?: number;
+  /** Consecutive boundary count for momentum */
+  boundaryStreak?: number;
+  /** Partnership history */
+  partnerships?: Partnership[];
+  /** Economy rate per bowler session (overs) */
+  economyByOver?: number[];
 };
 
 export type PitchType = 'Green' | 'Dusty' | 'Dead' | 'Hard';
 export type Weather = 'Sunny' | 'Overcast' | 'Rainy' | 'Humid';
 
-export type MatchStatus = 'waiting' | 'toss' | 'batting' | 'innings_break' | 'finished';
+export type MatchStatus =
+  | 'waiting'
+  | 'toss'
+  | 'coin_flip'
+  | 'batting'
+  | 'innings_break'
+  | 'super_over_break'
+  | 'finished';
+
+/** Audit log entry for every action taken */
+export type ActionLogEntry = {
+  uid: string;
+  action: BallAction;
+  timestamp: number;
+};
 
 export type MatchState = {
   status: MatchStatus;
@@ -95,6 +150,14 @@ export type MatchState = {
   isSuperOver?: boolean;
   currentTurn?: string;
   lastUpdated: number;
-  abandonedBy?: string;   // uid of player who left/disconnected
-  winner?: string;        // uid of the match winner
+  abandonedBy?: string;
+  winner?: string;
+  /** List of spectator UIDs (future feature) */
+  spectators?: string[];
+  /** Unix timestamp when batting phase began */
+  matchStartTime?: number;
+  /** Cumulative balls across both innings for analytics */
+  totalBalls?: number;
+  /** Full audit log of every action */
+  actionLog?: ActionLogEntry[];
 };

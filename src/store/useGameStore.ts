@@ -3,34 +3,30 @@ import type { UserProfile, MatchState, BallAction } from '../types/cricket';
 
 interface GameState {
   user: UserProfile | null;
-  setUser: (user: UserProfile | null) => void;
-
-  matchId: string | null;
-  setMatchId: (id: string | null) => void;
-
   matchState: MatchState | null;
-  setMatchState: (state: MatchState | null) => void;
-
   myAction: BallAction | null;
-  setMyAction: (action: BallAction | null) => void;
-
   opponentAction: BallAction | null;
+
+  setUser: (user: UserProfile | null) => void;
+  setMatchState: (state: MatchState | null) => void;
+  setMyAction: (action: BallAction | null) => void;
   setOpponentAction: (action: BallAction | null) => void;
+  resetMatch: () => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
   user: null,
-  setUser: (user) => set({ user }),
-
-  matchId: null,
-  setMatchId: (matchId) => set({ matchId }),
-
   matchState: null,
-  setMatchState: (matchState) => set({ matchState }),
-
   myAction: null,
-  setMyAction: (myAction) => set({ myAction }),
-
   opponentAction: null,
+
+  setUser: (user) => set({ user }),
+  setMatchState: (matchState) => set({ matchState }),
+  setMyAction: (myAction) => set({ myAction }),
   setOpponentAction: (opponentAction) => set({ opponentAction }),
+  resetMatch: () => set({
+    matchState: null,
+    myAction: null,
+    opponentAction: null,
+  }),
 }));

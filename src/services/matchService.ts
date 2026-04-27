@@ -1,10 +1,43 @@
 import { ref, set, onValue, update, remove, get, onDisconnect } from 'firebase/database';
 import { rtdb } from './firebase';
-import type {  MatchState, UserProfile, TossDecision, TossCall  } from '../types/cricket';
+import type { MatchState, UserProfile, TossDecision, TossCall, PitchType, Weather, MatchFormat } from '../types/cricket';
 
-export const createMatch = async (user: UserProfile, format: 'T20'|'ODI'|'custom', customOvers: number, stadium: string, pitch: any, weather: any) => {
-  const matchId = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
-  
+// ─── Retry Logic ────────────────────────────────────────────────────────────
+
+const MAX_RETRIES = 3;
+
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  retries: number = MAX_RETRIES,
+  baseDelay: number = 300
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await operation();
+    } catch (err) {
+      lastError = err;
+      if (attempt < retries) {
+        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 100;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError;
+}
+
+// ─── Match CRUD ─────────────────────────────────────────────────────────────
+
+export const createMatch = async (
+  user: UserProfile,
+  format: MatchFormat,
+  customOvers: number,
+  stadium: string,
+  pitch: PitchType,
+  weather: Weather
+) => {
+  const matchId = Math.floor(100000 + Math.random() * 900000).toString();
+
   const initialState: MatchState = {
     status: 'waiting',
     format,
@@ -12,30 +45,34 @@ export const createMatch = async (user: UserProfile, format: 'T20'|'ODI'|'custom
     stadium,
     pitch,
     weather,
-    player1: { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, role: 'bat' }, // Role decided after toss
-    lastUpdated: Date.now()
+    player1: { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, role: 'bat' },
+    lastUpdated: Date.now(),
   };
 
-  await set(ref(rtdb, `matches/${matchId}`), initialState);
+  await withRetry(() => set(ref(rtdb, `matches/${matchId}`), initialState));
   return matchId;
 };
 
 export const joinMatch = async (matchId: string, user: UserProfile) => {
-  const matchRef = ref(rtdb, `matches/${matchId}`);
-  const snapshot = await get(matchRef);
-  if (snapshot.exists()) {
-    const match = snapshot.val() as MatchState;
-    if (match.status === 'waiting' && match.player1.uid !== user.uid) {
-      await update(matchRef, {
-        player2: { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, role: 'bowl' },
-        status: 'toss',
-        lastUpdated: Date.now()
-      });
-      return true;
+  return withRetry(async () => {
+    const matchRef = ref(rtdb, `matches/${matchId}`);
+    const snapshot = await get(matchRef);
+    if (snapshot.exists()) {
+      const match = snapshot.val() as MatchState;
+      if (match.status === 'waiting' && match.player1.uid !== user.uid) {
+        await update(matchRef, {
+          player2: { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, role: 'bowl' },
+          status: 'toss',
+          lastUpdated: Date.now(),
+        });
+        return true;
+      }
     }
-  }
-  return false;
+    return false;
+  });
 };
+
+// ─── Real-time Subscription ─────────────────────────────────────────────────
 
 export const subscribeToMatch = (matchId: string, callback: (match: MatchState | null) => void) => {
   const matchRef = ref(rtdb, `matches/${matchId}`);
@@ -48,60 +85,66 @@ export const subscribeToMatch = (matchId: string, callback: (match: MatchState |
   });
 };
 
+// ─── Toss System ────────────────────────────────────────────────────────────
+
 export const callToss = async (matchId: string, callerUid: string, call: TossCall) => {
-  const matchRef = ref(rtdb, `matches/${matchId}`);
-  const snapshot = await get(matchRef);
-  if (!snapshot.exists()) return;
-  const match = snapshot.val() as MatchState;
-  
-  const result: TossCall = Math.random() > 0.5 ? 'heads' : 'tails';
-  const opponentUid = match.player1.uid === callerUid ? match.player2?.uid : match.player1.uid;
-  const winner = call === result ? callerUid : opponentUid;
-  
-  await update(matchRef, {
-    toss: {
-      calledBy: callerUid,
-      call,
-      result,
-      winner: winner || 'pending',
-      decision: 'bat'
-    },
-    lastUpdated: Date.now()
+  return withRetry(async () => {
+    const matchRef = ref(rtdb, `matches/${matchId}`);
+    const snapshot = await get(matchRef);
+    if (!snapshot.exists()) return;
+    const match = snapshot.val() as MatchState;
+
+    const result: TossCall = Math.random() > 0.5 ? 'heads' : 'tails';
+    const opponentUid = match.player1.uid === callerUid ? match.player2?.uid : match.player1.uid;
+    const winner = call === result ? callerUid : opponentUid;
+
+    await update(matchRef, {
+      toss: {
+        calledBy: callerUid,
+        call,
+        result,
+        winner: winner || 'pending',
+        decision: 'bat',
+      },
+      status: 'coin_flip',
+      lastUpdated: Date.now(),
+    });
   });
 };
 
 export const submitTossDecision = async (matchId: string, decision: TossDecision) => {
-  const matchRef = ref(rtdb, `matches/${matchId}`);
-  const snapshot = await get(matchRef);
-  if (!snapshot.exists()) return;
-  const match = snapshot.val() as MatchState;
-  
-  const tossWinner = match.toss?.winner;
-  const isP1Winner = match.player1.uid === tossWinner;
-  
-  // If P1 won and chose bat -> P1 bat, P2 bowl
-  // If P1 won and chose bowl -> P1 bowl, P2 bat
-  // If P2 won and chose bat -> P2 bat, P1 bowl
-  // If P2 won and chose bowl -> P2 bowl, P1 bat
-  const p1Role = isP1Winner ? (decision === 'bat' ? 'bat' : 'bowl') : (decision === 'bat' ? 'bowl' : 'bat');
-  const p2Role = p1Role === 'bat' ? 'bowl' : 'bat';
+  return withRetry(async () => {
+    const matchRef = ref(rtdb, `matches/${matchId}`);
+    const snapshot = await get(matchRef);
+    if (!snapshot.exists()) return;
+    const match = snapshot.val() as MatchState;
 
-  await update(matchRef, {
-    'toss/decision': decision,
-    'player1/role': p1Role,
-    'player2/role': p2Role,
-    status: 'batting',
-    lastUpdated: Date.now()
+    const tossWinner = match.toss?.winner;
+    const isP1Winner = match.player1.uid === tossWinner;
+
+    const p1Role = isP1Winner ? (decision === 'bat' ? 'bat' : 'bowl') : (decision === 'bat' ? 'bowl' : 'bat');
+    const p2Role = p1Role === 'bat' ? 'bowl' : 'bat';
+
+    await update(matchRef, {
+      'toss/decision': decision,
+      'player1/role': p1Role,
+      'player2/role': p2Role,
+      status: 'batting',
+      matchStartTime: Date.now(),
+      lastUpdated: Date.now(),
+    });
   });
 };
 
-// Queue system for public matchmaking
+// ─── Public Matchmaking Queue ───────────────────────────────────────────────
+
 export const joinPublicQueue = async (user: UserProfile) => {
   const queueRef = ref(rtdb, `publicQueue/${user.uid}`);
   await set(queueRef, {
     uid: user.uid,
     displayName: user.displayName,
-    joinedAt: Date.now()
+    elo: user.stats.elo ?? 1000,
+    joinedAt: Date.now(),
   });
 };
 
@@ -109,45 +152,42 @@ export const leavePublicQueue = async (uid: string) => {
   await remove(ref(rtdb, `publicQueue/${uid}`));
 };
 
-// Player explicitly leaves / forfeits the match
+// ─── Leave / Forfeit ────────────────────────────────────────────────────────
+
 export const leaveMatch = async (matchId: string, leavingUid: string) => {
-  const matchRef = ref(rtdb, `matches/${matchId}`);
-  const snapshot = await get(matchRef);
-  if (!snapshot.exists()) return;
-  const match = snapshot.val() as MatchState;
+  return withRetry(async () => {
+    const matchRef = ref(rtdb, `matches/${matchId}`);
+    const snapshot = await get(matchRef);
+    if (!snapshot.exists()) return;
+    const match = snapshot.val() as MatchState;
 
-  // Determine the winner (the other player)
-  const winnerUid = match.player1.uid === leavingUid
-    ? match.player2?.uid
-    : match.player1.uid;
+    const winnerUid = match.player1.uid === leavingUid
+      ? match.player2?.uid
+      : match.player1.uid;
 
-  await update(matchRef, {
-    status: 'finished',
-    abandonedBy: leavingUid,
-    winner: winnerUid || null,
-    lastUpdated: Date.now()
+    await update(matchRef, {
+      status: 'finished',
+      abandonedBy: leavingUid,
+      winner: winnerUid || null,
+      lastUpdated: Date.now(),
+    });
   });
 };
 
-// Setup presence tracking — auto-forfeits if the player disconnects
+// ─── Presence Tracking ──────────────────────────────────────────────────────
+
 export const setupPresence = (matchId: string, userUid: string) => {
   const presenceRef = ref(rtdb, `matches/${matchId}/presence/${userUid}`);
 
-  // Mark as online
   set(presenceRef, true);
-
-  // When this client disconnects, mark as offline
   onDisconnect(presenceRef).set(false);
 
-  // Return cleanup function
   return () => {
-    // Remove the onDisconnect hook and set to null (player is navigating away intentionally)
     onDisconnect(presenceRef).cancel();
     remove(presenceRef);
   };
 };
 
-// Subscribe to opponent presence
 export const subscribeToPresence = (
   matchId: string,
   opponentUid: string,
@@ -158,9 +198,28 @@ export const subscribeToPresence = (
     if (snapshot.exists()) {
       callback(snapshot.val() === true);
     } else {
-      // No presence data yet — assume online (they might not have set it up yet)
       callback(true);
     }
   });
 };
 
+// ─── Reconnection ───────────────────────────────────────────────────────────
+
+/**
+ * Check if the user has an active match to reconnect to.
+ */
+export const checkForActiveMatch = async (matchId: string, userUid: string): Promise<boolean> => {
+  try {
+    const matchRef = ref(rtdb, `matches/${matchId}`);
+    const snapshot = await get(matchRef);
+    if (!snapshot.exists()) return false;
+
+    const match = snapshot.val() as MatchState;
+    if (match.status === 'finished') return false;
+
+    // Verify this user is part of the match
+    return match.player1.uid === userUid || match.player2?.uid === userUid;
+  } catch {
+    return false;
+  }
+};
