@@ -393,7 +393,7 @@ export const calculateBallOutcome = (
  */
 function determineDismissalType(
   shot: ShotType,
-  bowl: BowlType,
+  _bowl: BowlType,
   line: Line,
   length: Length,
   isFreeHit?: boolean

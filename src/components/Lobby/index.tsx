@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/useGameStore';
 import { createMatch, joinMatch, checkForActiveMatch } from '../../services/matchService';
 import type { MatchFormat, PitchType, Weather } from '../../types/cricket';
-import { Swords, Globe, Trophy, User, Wifi, WifiOff, ArrowRight, CheckCircle } from 'lucide-react';
+import { Swords, Trophy, User, Wifi, WifiOff, ArrowRight, CheckCircle } from 'lucide-react';
 
 const STADIUMS = ['Lords', 'MCG', 'Wankhede', 'Eden Gardens', 'Gabba', 'Oval'];
 const PITCHES: PitchType[] = ['Green', 'Dusty', 'Dead', 'Hard'];

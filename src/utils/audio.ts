@@ -45,7 +45,7 @@ export class AudioManager {
     this.contextResumed = true;
 
     try {
-      const AC = window.AudioContext || (window as Record<string, unknown>).webkitAudioContext as typeof AudioContext;
+      const AC = window.AudioContext || (window as any).webkitAudioContext as typeof AudioContext;
       if (!AC) return;
       this.ctx = new AC();
       this.masterGain = this.ctx.createGain();
@@ -304,7 +304,7 @@ export class AudioManager {
     if (this.crowdCtx || this.muted) return;
 
     try {
-      const AC = window.AudioContext || (window as Record<string, unknown>).webkitAudioContext as typeof AudioContext;
+      const AC = window.AudioContext || (window as any).webkitAudioContext as typeof AudioContext;
       if (!AC) return;
       this.crowdCtx = new AC();
 

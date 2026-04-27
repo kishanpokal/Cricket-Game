@@ -18,7 +18,7 @@ export default function Matchmaking() {
   const navigate = useNavigate();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!user) return;
