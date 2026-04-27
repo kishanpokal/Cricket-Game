@@ -462,17 +462,32 @@ function determineRuns(
 ): { runs: number; special: BallOutcome['special']; commentary: string } {
   const runRoll = Math.random() * 100;
 
-  if (runRoll < runPotential * 0.3 && power > 65) {
+  // Ensure a minimum baseline so we don't always get dot balls
+  // when runPotential is low. Even defensive shots can nick runs.
+  const effectivePot = Math.max(runPotential, 15);
+
+  // SIX threshold: needs decent power
+  const sixThreshold = effectivePot * 0.3 * (power > 65 ? 1 : 0.3);
+  if (runRoll < sixThreshold && power > 40) {
     return { runs: 6, special: 'SIX', commentary: getSixCommentary(shot) };
   }
-  if (runRoll < runPotential * 0.6) {
+
+  // FOUR threshold
+  const fourThreshold = sixThreshold + effectivePot * 0.35;
+  if (runRoll < fourThreshold) {
     return { runs: 4, special: 'FOUR', commentary: getFourCommentary(shot) };
   }
-  if (runRoll < runPotential * 0.8) {
+
+  // 2-3 runs
+  const runThreshold = fourThreshold + effectivePot * 0.25;
+  if (runRoll < runThreshold) {
     const r = Math.random() > 0.6 ? 2 : 3;
     return { runs: r, special: null, commentary: `Good running! ${r} taken off a ${shot.toLowerCase()}.` };
   }
-  if (runRoll < runPotential || shot !== 'Defensive') {
+
+  // 1-2 runs
+  const singleThreshold = runThreshold + effectivePot * 0.20;
+  if (runRoll < singleThreshold || (shot !== 'Defensive' && runRoll < 70)) {
     const r = Math.random() > 0.4 ? 1 : 2;
     return { runs: r, special: null, commentary: `Worked away for ${r}.` };
   }

@@ -86,18 +86,6 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
     return () => clearInterval(interval);
   }, [submitted, timer]);
 
-  const handleAutoSubmit = useCallback(() => {
-    // Auto-submit with defaults if timer runs out
-    const line = selectedZone?.line ?? 'Off Stump';
-    const length = selectedZone?.length ?? 'Good Length';
-    handleFinalSubmit(bowlType, line, length);
-  }, [selectedZone, bowlType]);
-
-  const handleZoneSelect = useCallback((zone: PitchZone) => {
-    if (zone.length === 'Bouncer' && bouncerDisabled) return;
-    setSelectedZone(zone);
-  }, [bouncerDisabled]);
-
   const handleFinalSubmit = useCallback((bt: BowlType, ln: Line, len: Length) => {
     if (submitted) return;
     setSubmitted(true);
@@ -108,6 +96,29 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
 
     onSubmit({ bowlType: bt, line: ln, length: len });
   }, [submitted, onSubmit]);
+
+  const handleAutoSubmit = useCallback(() => {
+    // Auto-submit with random defaults if timer runs out and no zone selected
+    let finalZone = selectedZone;
+    let finalBowlType = bowlType;
+    
+    if (!finalZone) {
+      const validZones = bouncerDisabled 
+        ? PITCH_ZONES.filter(z => z.label !== 'Bouncer') 
+        : [...PITCH_ZONES, BOUNCER_ZONE];
+      finalZone = validZones[Math.floor(Math.random() * validZones.length)];
+      
+      const types: BowlType[] = ['Pace', 'Spin', 'Swing'];
+      finalBowlType = types[Math.floor(Math.random() * types.length)];
+    }
+    
+    handleFinalSubmit(finalBowlType, finalZone.line, finalZone.length);
+  }, [selectedZone, bowlType, bouncerDisabled, handleFinalSubmit]);
+
+  const handleZoneSelect = useCallback((zone: PitchZone) => {
+    if (zone.length === 'Bouncer' && bouncerDisabled) return;
+    setSelectedZone(zone);
+  }, [bouncerDisabled]);
 
   const handleSubmit = useCallback(() => {
     if (!selectedZone) {
@@ -120,15 +131,15 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
 
   if (submitted) {
     return (
-      <div className="w-full bg-gradient-to-br from-gray-900 to-gray-800 p-5 sm:p-6 rounded-2xl text-center shadow-[0_0_40px_rgba(239,68,68,0.3)] border border-gray-700/50 backdrop-blur-xl">
-        <div className="flex justify-center mb-3">
-          <div className="w-10 h-10 rounded-full border-2 border-red-400 border-t-transparent animate-spin" />
+      <div className="w-full bg-gradient-to-br from-gray-900 to-gray-800 p-4 sm:p-5 rounded-xl text-center shadow-[0_0_40px_rgba(239,68,68,0.3)] border border-gray-700/50 backdrop-blur-xl">
+        <div className="flex justify-center mb-2">
+          <div className="w-8 h-8 rounded-full border-2 border-red-400 border-t-transparent animate-spin" />
         </div>
-        <h3 className="text-lg sm:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-300 uppercase tracking-wider">
+        <h3 className="text-base sm:text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-300 uppercase tracking-wider">
           Waiting for Batter
         </h3>
-        <p className="text-gray-500 mt-1 text-xs sm:text-sm">
-          {bowlType} — {selectedZone?.label ?? 'Good Off'}
+        <p className="text-gray-500 mt-1 text-[10px] sm:text-xs">
+          {bowlType} — {selectedZone?.label ?? 'Randomizing...'}
           <span className="ml-2 text-gray-600">{getBowlingSpeed(bowlType)}</span>
         </p>
       </div>
@@ -147,21 +158,21 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
       aria-label="Bowling controls"
     >
       {/* Header */}
-      <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center gap-2">
-          <div className="bg-red-600/20 p-1.5 rounded-lg border border-red-500/30">
-            <span className="text-base" aria-hidden="true">🎯</span>
+      <div className="flex justify-between items-center mb-1.5 sm:mb-3">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="bg-red-600/20 p-1 rounded-lg border border-red-500/30">
+            <span className="text-sm sm:text-base" aria-hidden="true">🎯</span>
           </div>
           <div>
-            <h3 className="text-sm sm:text-base font-black text-white tracking-wide uppercase">Bowling</h3>
-            <p className="text-[8px] sm:text-[10px] text-red-400/80 font-bold tracking-wider">
+            <h3 className="text-xs sm:text-sm font-black text-white tracking-wide uppercase">Bowling</h3>
+            <p className="text-[7px] sm:text-[9px] text-red-400/80 font-bold tracking-wider">
               TAP A ZONE & BOWL
             </p>
           </div>
         </div>
 
         {/* Circular timer */}
-        <div className="relative w-12 h-12 sm:w-14 sm:h-14" aria-label={`${timer} seconds remaining`}>
+        <div className="relative w-10 h-10 sm:w-12 sm:h-12" aria-label={`${timer} seconds remaining`}>
           <svg className="w-full h-full -rotate-90" viewBox="0 0 48 48">
             <circle cx="24" cy="24" r="22" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
             <circle
@@ -175,35 +186,35 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
               style={{ transition: 'stroke-dashoffset 1s linear' }}
             />
           </svg>
-          <div className={`absolute inset-0 flex items-center justify-center font-mono text-base sm:text-lg font-black ${timer <= 2 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
+          <div className={`absolute inset-0 flex items-center justify-center font-mono text-sm sm:text-base font-black ${timer <= 2 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
             {timer}
           </div>
         </div>
       </div>
 
       {/* Bowl type selector */}
-      <div className="flex gap-1.5 mb-3" role="radiogroup" aria-label="Bowl type">
+      <div className="flex gap-1 mb-2 sm:mb-3" role="radiogroup" aria-label="Bowl type">
         {(['Pace', 'Spin', 'Swing'] as BowlType[]).map(t => (
           <button
             key={t}
             onClick={() => setBowlType(t)}
             role="radio"
             aria-checked={bowlType === t}
-            className={`flex-1 py-2 sm:py-2.5 rounded-lg font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all duration-200 cursor-pointer ${
+            className={`flex-1 py-1.5 sm:py-2.5 rounded-lg font-bold text-[9px] sm:text-xs uppercase tracking-widest transition-all duration-200 cursor-pointer ${
               bowlType === t
                 ? 'bg-gradient-to-br from-red-500 to-red-700 text-white shadow-[0_4px_15px_rgba(239,68,68,0.4)] border border-red-400/50'
                 : 'bg-gray-800/80 text-gray-400 border border-gray-700 hover:bg-gray-700 hover:text-white'
             }`}
           >
             {t === 'Pace' ? '🔥' : t === 'Spin' ? '🌀' : '💨'} {t}
-            <div className="text-[7px] sm:text-[8px] mt-0.5 opacity-60">{getBowlingSpeed(t)}</div>
+            <div className="text-[6px] sm:text-[8px] mt-0.5 opacity-60">{getBowlingSpeed(t)}</div>
           </button>
         ))}
       </div>
 
       {/* Pitch map SVG */}
-      <div className="relative bg-[var(--color-soil)] rounded-xl p-2 sm:p-3 border border-[var(--color-soil-light)] mb-3">
-        <div className="relative w-full" style={{ paddingBottom: '120%' }}>
+      <div className="relative bg-[var(--color-soil)] rounded-xl p-1 sm:p-3 border border-[var(--color-soil-light)] mb-2 sm:mb-3">
+        <div className="relative w-full max-w-[280px] mx-auto" style={{ paddingBottom: '70%' }}>
           <svg
             viewBox="-15 -20 130 120"
             className="absolute inset-0 w-full h-full"
@@ -336,7 +347,7 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
       {/* Bowl Delivery button */}
       <button
         onClick={handleSubmit}
-        className="w-full relative overflow-hidden group bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-500 hover:to-orange-400 py-3 sm:py-4 rounded-xl font-black text-base sm:text-lg text-white uppercase tracking-widest shadow-[0_8px_25px_rgba(239,68,68,0.4)] hover:shadow-[0_8px_35px_rgba(239,68,68,0.6)] transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer"
+        className="w-full relative overflow-hidden group bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-500 hover:to-orange-400 py-2 sm:py-3 rounded-lg font-black text-sm sm:text-base text-white uppercase tracking-widest shadow-[0_8px_25px_rgba(239,68,68,0.4)] hover:shadow-[0_8px_35px_rgba(239,68,68,0.6)] transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer"
         aria-label={`Bowl ${bowlType} delivery to ${selectedZone?.label ?? 'Good Off'}`}
       >
         <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />

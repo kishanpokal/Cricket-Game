@@ -210,7 +210,7 @@ export default function Game() {
         )}
 
         {/* Controls at bottom of field */}
-        <div className="w-full max-w-xl mx-auto px-2 sm:px-4 pb-2 sm:pb-4 mt-auto pt-2 relative" style={{ zIndex: 'var(--z-ui)' as string, maxHeight: '260px', overflowY: 'auto' }}>
+        <div className="w-full max-w-xl mx-auto px-2 sm:px-4 pb-2 sm:pb-4 mt-auto pt-1 relative" style={{ zIndex: 'var(--z-ui)' as string, maxHeight: '55vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {amIBatting ? (
             <BattingUI onSubmit={submitAction} ballReady={ballReady} />
           ) : (

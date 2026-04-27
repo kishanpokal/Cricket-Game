@@ -10,7 +10,7 @@ import {
   calculateRunRate,
 } from '../services/aiLogic';
 import { subscribeToMatch } from '../services/matchService';
-import type { BallAction, MatchState, InningsState } from '../types/cricket';
+import type { BallAction, MatchState, InningsState, ShotType, BowlType, Line, Length } from '../types/cricket';
 
 /** Ball processing state machine */
 type BallPhase = 'idle' | 'waiting_both' | 'processing' | 'result_shown';
@@ -416,9 +416,15 @@ export const useMatch = (matchId: string | null) => {
       if ((hasP1 && !hasP2) || (!hasP1 && hasP2)) {
         watchdog = setTimeout(() => {
           const missingKey = hasP1 ? 'p2' : 'p1';
+          // Randomize the auto-submit so outcomes aren't always 0 runs
+          const shotTypes: ShotType[] = ['Defensive', 'Drive', 'Cut', 'Pull', 'Sweep', 'Slog', 'Loft'];
+          const bowlTypes: BowlType[] = ['Pace', 'Spin', 'Swing'];
+          const lines: Line[] = ['Off Stump', 'Middle', 'Leg', 'Outside Off'];
+          const lengths: Length[] = ['Full', 'Good Length', 'Short', 'Yorker'];
+          
           const defaultAction: BallAction = hasP1
-            ? { bowlType: 'Pace', line: 'Off Stump', length: 'Good Length' }
-            : { shotType: 'Defensive', power: 30 };
+            ? { bowlType: bowlTypes[Math.floor(Math.random() * bowlTypes.length)], line: lines[Math.floor(Math.random() * lines.length)], length: lengths[Math.floor(Math.random() * lengths.length)] }
+            : { shotType: shotTypes[Math.floor(Math.random() * shotTypes.length)], power: Math.floor(Math.random() * 61) + 40 };
 
           console.log('[useMatch] Watchdog: auto-submitting for', missingKey);
           update(ref(rtdb, `matches/${matchId}/actions`), JSON.parse(JSON.stringify({
