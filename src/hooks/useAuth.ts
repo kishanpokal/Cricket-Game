@@ -5,6 +5,16 @@ import { auth, googleProvider, db } from '../services/firebase';
 import { useGameStore } from '../store/useGameStore';
 import type {  UserProfile  } from '../types/cricket';
 
+const ADJECTIVES = ['Mighty', 'Super', 'Pro', 'Elite', 'Epic', 'Swift', 'Fierce', 'Magic'];
+const NOUNS = ['Striker', 'Bowler', 'Smasher', 'Fielder', 'Captain', 'Legend', 'Champ'];
+
+const generateRandomName = () => {
+  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+  const num = Math.floor(Math.random() * 100);
+  return `${adj}${noun}${num}`;
+};
+
 export const useAuth = () => {
   const { user, setUser } = useGameStore();
   const [loading, setLoading] = useState(true);
@@ -20,10 +30,11 @@ export const useAuth = () => {
         if (userSnap.exists()) {
           profile = userSnap.data() as UserProfile;
         } else {
+          const defaultName = generateRandomName();
           profile = {
             uid: firebaseUser.uid,
-            displayName: firebaseUser.displayName || 'Player',
-            photoURL: firebaseUser.photoURL || '',
+            displayName: firebaseUser.displayName || defaultName,
+            photoURL: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${defaultName}`,
             email: firebaseUser.email || '',
             stats: {
               matches: 0,
