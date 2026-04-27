@@ -381,13 +381,24 @@ export const useMatch = (matchId: string | null) => {
 
       if (!actions) {
         // Actions cleared — new ball starting
+        const wasWaiting = myActionRef.current !== null || processingRef.current;
+        
         myActionRef.current = null;
         setMyAction(null);
         setOpponentAction(null);
-        setBallReady(true);
-        setBallPhase('idle');
         processingRef.current = false;
         submitLockRef.current = false;
+        
+        if (wasWaiting) {
+          // Delay UI reset to allow result overlay animations to finish
+          setTimeout(() => {
+            setBallReady(true);
+            setBallPhase('idle');
+          }, 3500);
+        } else {
+          setBallReady(true);
+          setBallPhase('idle');
+        }
         return;
       }
 
