@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/useGameStore';
 import { createMatch, joinMatch } from '../../services/matchService';
-import { Play, Users, Trophy, User } from 'lucide-react';
+import { Play, Users, Trophy } from 'lucide-react';
 
 const OVER_OPTIONS = [1, 2, 3, 5, 10, 15, 20, 50];
 

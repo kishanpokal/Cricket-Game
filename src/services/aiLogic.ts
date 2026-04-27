@@ -1,6 +1,5 @@
 import type {  BallAction, BallOutcome, PitchType, Weather, MatchFormat, DismissalType, ShotType, BowlType  } from '../types/cricket';
 
-const outcomes = [0, 1, 2, 3, 4, 6];
 
 /**
  * Returns the max wickets allowed before "all out" based on overs.
@@ -23,7 +22,7 @@ export const calculateBallOutcome = (
   bowlAction: BallAction,
   pitch: PitchType,
   weather: Weather,
-  format: MatchFormat,
+  _format: MatchFormat,
   matchContext: {
     overs: number;
     balls: number;

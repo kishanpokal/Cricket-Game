@@ -60,10 +60,8 @@ export const useMatch = (matchId: string | null) => {
         return;
       }
 
-      const myKey = isPlayer1 ? 'p1' : 'p2';
       const opKey = isPlayer1 ? 'p2' : 'p1';
       
-      const mySubmitted = actions[myKey];
       const opSubmitted = actions[opKey];
 
       if (opSubmitted && myActionRef.current) {
