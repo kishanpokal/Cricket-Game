@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged, signInWithPopup } from 'firebase/auth';
+import { onAuthStateChanged, signInWithPopup, signInAnonymously } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../services/firebase';
 import { useGameStore } from '../store/useGameStore';
@@ -90,5 +90,13 @@ export const useAuth = () => {
     }
   }, []);
 
-  return { user, loading, signIn, signOut };
+  const signInAsGuest = async () => {
+    try {
+      await signInAnonymously(auth);
+    } catch (error) {
+      console.error("Error signing in anonymously", error);
+    }
+  };
+
+  return { user, loading, signIn, signOut, signInAsGuest };
 };

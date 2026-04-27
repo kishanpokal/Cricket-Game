@@ -1,8 +1,8 @@
 import { useAuth } from '../../hooks/useAuth';
-import { Trophy, Shield } from 'lucide-react';
+import { Trophy, Shield, User } from 'lucide-react';
 
 export default function Auth() {
-  const { signIn } = useAuth();
+  const { signIn, signInAsGuest } = useAuth();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-green-900 to-gray-900">
@@ -15,10 +15,18 @@ export default function Auth() {
         
         <button 
           onClick={signIn}
-          className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-bold py-4 px-6 rounded-xl hover:bg-gray-100 transition duration-200 shadow-xl"
+          className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-bold py-4 px-6 rounded-xl hover:bg-gray-100 transition duration-200 shadow-xl mb-4"
         >
           <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-6 h-6" />
           Sign in with Google
+        </button>
+
+        <button 
+          onClick={signInAsGuest}
+          className="w-full flex items-center justify-center gap-3 bg-gray-700 text-white font-bold py-4 px-6 rounded-xl hover:bg-gray-600 transition duration-200 shadow-xl"
+        >
+          <User size={24} />
+          Play as Guest
         </button>
         
         <div className="mt-8 flex items-center gap-2 text-xs text-gray-500">
