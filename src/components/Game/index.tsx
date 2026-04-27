@@ -8,7 +8,7 @@ import { getMaxWickets } from '../../services/aiLogic';
 import Scoreboard from './Scoreboard';
 import BattingUI from './BattingUI';
 import BowlingUI from './BowlingUI';
-import Commentary from './Commentary';
+
 import LeaveConfirmDialog from './LeaveConfirmDialog';
 import BallResultOverlay from './BallResultOverlay';
 

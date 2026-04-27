@@ -56,7 +56,7 @@ export default function BattingUI({ onSubmit, ballReady }: { onSubmit: (action: 
     }
   };
 
-  const handleSubmit = (isTimeout = false) => {
+  const handleSubmit = (_isTimeout = false) => {
     if (submitted) return;
     setSubmitted(true);
     onSubmit({ shotType, power });

@@ -119,7 +119,7 @@ export default function Scoreboard({ matchState }: { matchState: MatchState }) {
           <div className="flex gap-1.5 p-1.5 bg-gray-900 rounded-xl border border-gray-800 shadow-inner">
             {(currentInnings.ballLog || []).slice(-6).map((ball, i) => {
               const isWicket = ball.wicket && !ball.isFreeHit; // Actual wicket
-              const isBoundary = ball.runs === 4 || ball.runs === 6;
+
               const isDot = ball.runs === 0 && !isWicket;
               
               return (

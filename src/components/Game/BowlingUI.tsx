@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { BallAction, BowlType, Line, Length } from '../../types/cricket';
-import { Target, Crosshair, Clock, Zap, ArrowRight, Activity } from 'lucide-react';
+import { Target, Crosshair, Clock, Zap, ArrowRight } from 'lucide-react';
 
 export default function BowlingUI({ onSubmit, ballReady, bouncersBowledInOver }: { onSubmit: (action: BallAction) => void; ballReady: boolean; bouncersBowledInOver: number }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -64,7 +64,7 @@ export default function BowlingUI({ onSubmit, ballReady, bouncersBowledInOver }:
     }
   };
 
-  const handleSubmit = (isTimeout = false) => {
+  const handleSubmit = (_isTimeout = false) => {
     if (submitted) return;
     setSubmitted(true);
     onSubmit({ bowlType, line, length });
