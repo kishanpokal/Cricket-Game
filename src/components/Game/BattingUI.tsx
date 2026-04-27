@@ -21,7 +21,7 @@ const SHOTS: { type: ShotType; icon: string; label: string }[] = [
 export default memo(function BattingUI({ onSubmit, ballReady }: BattingUIProps) {
   const [shotType, setShotType] = useState<ShotType>('Defensive');
   const [power, setPower] = useState(50);
-  const [timer, setTimer] = useState(8);
+  const [timer, setTimer] = useState(15);
   const [submitted, setSubmitted] = useState(false);
   const timerRef = useRef<SVGCircleElement>(null);
   const lastTimerWarning = useRef(0);
@@ -32,7 +32,7 @@ export default memo(function BattingUI({ onSubmit, ballReady }: BattingUIProps) 
       setSubmitted(false);
       setShotType('Defensive');
       setPower(50);
-      setTimer(8);
+      setTimer(15);
     }
   }, [ballReady]);
 
@@ -113,7 +113,7 @@ export default memo(function BattingUI({ onSubmit, ballReady }: BattingUIProps) 
   }
 
   // Timer progress (0 to 1)
-  const timerProgress = timer / 8;
+  const timerProgress = timer / 15;
   const circumference = 2 * Math.PI * 22;
   const strokeOffset = circumference * (1 - timerProgress);
 

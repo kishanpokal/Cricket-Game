@@ -366,9 +366,19 @@ export const calculateBallOutcome = (
   }
 
   if (isNoBall) {
-    commentary = `NO BALL! Overstepping by the bowler. ` + commentary;
+    const nbPrefix = pick([
+      `NO BALL! Overstepping by the bowler. `,
+      `NO BALL! Bowler ne line cross ki! `,
+      `Arrey NO BALL! Bowler ki galti! Extra run! `,
+    ]);
+    commentary = nbPrefix + commentary;
   } else if (matchContext.isFreeHit) {
-    commentary = `(Free Hit) ` + commentary;
+    const fhPrefix = pick([
+      `(Free Hit) `,
+      `FREE HIT! Batsman ko mauka! `,
+      `Free Hit hai! Maaro befikar! `,
+    ]);
+    commentary = fhPrefix + commentary;
   }
 
   return {
@@ -482,86 +492,141 @@ function determineRuns(
   const runThreshold = fourThreshold + effectivePot * 0.25;
   if (runRoll < runThreshold) {
     const r = Math.random() > 0.6 ? 2 : 3;
-    return { runs: r, special: null, commentary: `Good running! ${r} taken off a ${shot.toLowerCase()}.` };
+    return { runs: r, special: null, commentary: pick([`Good running! ${r} taken off a ${shot.toLowerCase()}.`, `Tez bhaage! ${r} run liye! ${shot} shot se acchi running!`, `Quick ${r}! Dono batsman ne milke ${r} run chura liye! 🏃`]) };
   }
 
   // 1-2 runs
   const singleThreshold = runThreshold + effectivePot * 0.20;
   if (runRoll < singleThreshold || (shot !== 'Defensive' && runRoll < 70)) {
     const r = Math.random() > 0.4 ? 1 : 2;
-    return { runs: r, special: null, commentary: `Worked away for ${r}.` };
+    return { runs: r, special: null, commentary: pick([`Worked away for ${r}.`, `${r} run liya! Smart cricket!`, `Nudged for ${r}. Achha rotation of strike!`]) };
   }
 
   return { runs: 0, special: 'DOT', commentary: getDotCommentary(_bowl, _length) };
 }
 
-// ─── Commentary Generators ───────────────────────────────────────────────────
+// ─── Commentary Generators (English + Hindi) ────────────────────────────────
 
 function getWicketCommentary(dismissal: DismissalType, bowl: BowlType, shot: ShotType): string {
   switch (dismissal) {
     case 'Bowled':
-      return `Clean bowled! The ${bowl.toLowerCase()} delivery crashes into the stumps!`;
+      return pick([
+        `Clean bowled! The ${bowl.toLowerCase()} delivery crashes into the stumps!`,
+        `गया! बोल्ड! ${bowl} गेंद सीधा स्टंप्स पर! क्या गेंदबाजी है! 🔥`,
+        `Ukhad diye stumps! ${bowl.toLowerCase()} delivery ne kaam kar diya!`,
+        `BOWLED HIM! Stumps ukhad gaye! Kya dangerous ${bowl.toLowerCase()} ball thi!`,
+      ]);
     case 'LBW':
-      return `Plumb in front! LBW given. Trapped by the ${bowl.toLowerCase()} bowler.`;
+      return pick([
+        `Plumb in front! LBW given. Trapped by the ${bowl.toLowerCase()} bowler.`,
+        `OUT! LBW! Bilkul plumb! ${bowl} bowler ne phasaya! Umpire ne ungli uthai!`,
+        `LBW! Pad pe lagi! Koi doubt nahi! Seedha middle stump pe ja rahi thi!`,
+      ]);
     case 'Caught':
-      return `Edged and taken! The ${shot.toLowerCase()} goes wrong. Gone!`;
+      return pick([
+        `Edged and taken! The ${shot.toLowerCase()} goes wrong. Gone!`,
+        `CATCH! ${shot} shot galat ho gaya! Fielder ne pakad liya! OUT!`,
+        `Hawa mein gaya aur pakda gaya! Kya catch hai! ${shot} shot bekaar gaya!`,
+        `Caught! Ye toh udh gaya! ${shot} pe control nahi rakh paaye!`,
+      ]);
     case 'Caught Behind':
-      return `Caught behind! A thin edge off the ${shot.toLowerCase()} and the keeper takes it cleanly!`;
+      return pick([
+        `Caught behind! A thin edge off the ${shot.toLowerCase()} and the keeper takes it cleanly!`,
+        `Caught Behind! Halka sa edge aur keeper ne le liya! ${shot} pe out!`,
+        `Wicket keeper ne kamaal kiya! Patli edge, seedha gloves mein!`,
+      ]);
     case 'Run Out':
-      return `Direct hit! They are miles short of the crease.`;
+      return pick([
+        `Direct hit! They are miles short of the crease.`,
+        `RUN OUT! Direct hit! Crease se bahut door the! Kya fielding hai!`,
+        `OUT! Direct throw! Batsman crease tak pahunch hi nahi paaya!`,
+      ]);
     case 'Stumped':
-      return `Dragged out of the crease and stumped! Too clever from the bowler.`;
+      return pick([
+        `Dragged out of the crease and stumped! Too clever from the bowler.`,
+        `STUMPED! Crease se bahar nikle aur keeper ne kaam kar diya! Smart bowling!`,
+        `Out of crease! Stumping! Bowler ne dimag lagaya aur batsman bahar aaya!`,
+      ]);
     case 'Hit Wicket':
-      return `Hit wicket! Lost balance attempting the ${shot.toLowerCase()}.`;
+      return pick([
+        `Hit wicket! Lost balance attempting the ${shot.toLowerCase()}.`,
+        `Hit Wicket! ${shot} khelne mein balance bigad gaya! Apne hi stumps tod diye!`,
+        `Arrey! Khud hi stumps pe gir gaye! Hit Wicket! Bohot bura hua!`,
+      ]);
     default:
-      return `He's gone! What a moment!`;
+      return pick([
+        `He's gone! What a moment!`,
+        `OUT! Kya moment hai! Wicket gir gayi!`,
+        `Gaya! Pavilion ka raasta pakdo! 🚶`,
+      ]);
   }
 }
 
 function getSixCommentary(shot: ShotType): string {
-  const options = [
+  return pick([
     `Massive SIX! Incredible ${shot.toLowerCase()} into the stands!`,
     `That's HUGE! A towering six off a ${shot.toLowerCase()}!`,
     `Into the crowd! What a shot! Maximum runs!`,
     `SIX! The ${shot.toLowerCase()} sends it sailing over the boundary!`,
     `Gone, gone, gone! That's disappeared into the night sky! SIX!`,
     `Out of the ground! A ${shot.toLowerCase()} of pure muscle!`,
-  ];
-  return options[Math.floor(Math.random() * options.length)];
+    `CHHAKKA! 🎆 ${shot} shot se ball stadium ke bahar! Kya maar hai!`,
+    `SIX! Ye toh chhakka hai! ${shot} se ball ghayab ho gayi! Dil jeet liya!`,
+    `Andar aai, bahar gayi! CHHAKKA! ${shot} shot zabardast!`,
+    `Dekhiye! Ball hawa mein hai... aur gir gayi stands mein! SIX! 💥`,
+    `Lamba! Bohot lamba! CHHAKKA! ${shot} ne toh majaa la diya!`,
+    `Arre waah! Kya ${shot} shot maara hai! Ball galaxy mein chali gayi! 🚀`,
+  ]);
 }
 
 function getFourCommentary(shot: ShotType): string {
-  const options = [
+  return pick([
     `Beautiful ${shot.toLowerCase()} for FOUR! Racing to the boundary.`,
     `FOUR runs! Perfectly timed ${shot.toLowerCase()}.`,
     `That's a boundary! Elegant ${shot.toLowerCase()} through the gap.`,
     `Pierces the field! FOUR from a crisp ${shot.toLowerCase()}.`,
     `Textbook ${shot.toLowerCase()} — the ball rockets to the fence!`,
     `Finding the gap with precision. FOUR more!`,
-  ];
-  return options[Math.floor(Math.random() * options.length)];
+    `CHAUKAA! 🏏 ${shot} shot se ball boundary tak! Kya timing hai!`,
+    `FOUR! ${shot} shot zabardast! Ball seedha rope tak gayi!`,
+    `Chamak gayi ball! ${shot} shot se CHAUKAA! Fielder hila bhi nahi!`,
+    `Kya shot hai! ${shot} se ball gap mein nikal gayi! FOUR!`,
+    `Cover drive nahi, ye toh art hai! Boundary! CHAUKAA!`,
+    `Ball ghoom ke boundary tak gayi! ${shot} shot class hai boss! 🔥`,
+  ]);
 }
 
 function getDotCommentary(bowl: BowlType, length: string): string {
-  const options = [
+  return pick([
     `Solidly defended. Dot ball.`,
     `Good ${bowl.toLowerCase()} delivery, no run. Tight bowling.`,
     `Beaten! The ${length.toLowerCase()} ball was too good. Dot.`,
     `Left alone wisely. No run scored.`,
     `Excellent line and length. The batter can't get it away.`,
     `Squeezed out but no run. Building pressure.`,
-  ];
-  return options[Math.floor(Math.random() * options.length)];
+    `Dot ball! ${bowl} gend pe kuch nahi mila! Tight bowling! 🎯`,
+    `No run! ${length} ball thi, batsman kuch kar nahi paaya!`,
+    `Shabaash bowler! Dot ball! Pressure badh raha hai! 💪`,
+    `Koi run nahi! ${bowl} ball ne batsman ko confuse kar diya!`,
+    `Behtareen bowling! Dot! Batsman sooch mein pad gaya!`,
+  ]);
 }
 
 function getWideCommentary(bowl: BowlType): string {
-  const options = [
+  return pick([
     `Wide! Straying down the leg side. Free run for the batting team.`,
     `Wide ball called. The ${bowl.toLowerCase()} delivery missed the corridor entirely.`,
     `Too wide! The umpire signals a wide. Extra run.`,
     `That's gone well wide. Umpire extends both arms. WIDE.`,
-  ];
-  return options[Math.floor(Math.random() * options.length)];
+    `WIDE! ${bowl} ball bahut door chali gayi! Umpire ne wide di! Free run! 🙅`,
+    `Wide ball! Ye toh batsman ke reach se bahar thi! Extra run!`,
+    `Arrey bhai, ye kahan daal di! WIDE! Bowling kharab ho rahi hai!`,
+  ]);
+}
+
+/** Utility: pick random from array */
+function pick(arr: string[]): string {
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
 // ─── Utility Exports ─────────────────────────────────────────────────────────

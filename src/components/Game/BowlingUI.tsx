@@ -47,7 +47,7 @@ const BOUNCER_ZONE: PitchZone = {
 export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOver }: BowlingUIProps) {
   const [bowlType, setBowlType] = useState<BowlType>('Pace');
   const [selectedZone, setSelectedZone] = useState<PitchZone | null>(null);
-  const [timer, setTimer] = useState(8);
+  const [timer, setTimer] = useState(15);
   const [submitted, setSubmitted] = useState(false);
   const lastTimerWarning = useRef(0);
 
@@ -62,7 +62,7 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
       setSubmitted(false);
       setBowlType('Pace');
       setSelectedZone(null);
-      setTimer(8);
+      setTimer(15);
     }
   }, [ballReady]);
 
@@ -147,7 +147,7 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
   }
 
   // Timer
-  const timerProgress = timer / 8;
+  const timerProgress = timer / 15;
   const circumference = 2 * Math.PI * 22;
   const strokeOffset = circumference * (1 - timerProgress);
 
