@@ -252,13 +252,23 @@ export default function Game() {
 
   const inningsLabel = isInnings2 ? '2nd Innings' : '1st Innings';
 
+  const inningsKey = isInnings2 ? 'innings2' : 'innings1';
+  const currentInnings = matchState[inningsKey];
+  const currentBallsInOver = currentInnings?.balls || 0;
+  
+  let bouncersBowledInOver = 0;
+  if (currentInnings?.ballLog && currentBallsInOver > 0) {
+    const ballsThisOver = currentInnings.ballLog.slice(-currentBallsInOver);
+    bouncersBowledInOver = ballsThisOver.filter((b: any) => b.length === 'Bouncer').length;
+  }
+
   return (
     <div className="h-screen flex flex-col bg-gray-900 text-white overflow-hidden">
       {/* Top bar with leave button & opponent status */}
       <div className="flex items-center justify-between px-4 py-2 bg-gray-950 border-b border-gray-800">
         <div className="flex items-center gap-3">
           <div className={`w-2.5 h-2.5 rounded-full ${opponentOnline ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
-          <span className="text-sm text-gray-400">
+          <span className="text-xs sm:text-sm text-gray-400">
             {opponentOnline ? 'Opponent online' : 'Opponent disconnected...'}
           </span>
           <span className="text-xs bg-gray-800 px-2 py-0.5 rounded-full text-gray-500 font-semibold">{inningsLabel}</span>
@@ -289,11 +299,11 @@ export default function Game() {
         )}
 
         {/* Center UI block for action */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-10">
+        <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-2 sm:px-4 z-10">
            {amIBatting ? (
               <BattingUI onSubmit={submitAction} ballReady={ballReady} />
            ) : (
-              <BowlingUI onSubmit={submitAction} ballReady={ballReady} />
+              <BowlingUI onSubmit={submitAction} ballReady={ballReady} bouncersBowledInOver={bouncersBowledInOver} />
            )}
         </div>
       </div>

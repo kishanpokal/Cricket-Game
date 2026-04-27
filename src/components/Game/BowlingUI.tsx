@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type {  BallAction, BowlType, Line, Length  } from '../../types/cricket';
 
-export default function BowlingUI({ onSubmit, ballReady }: { onSubmit: (action: BallAction) => void; ballReady: boolean }) {
+export default function BowlingUI({ onSubmit, ballReady, bouncersBowledInOver }: { onSubmit: (action: BallAction) => void; ballReady: boolean; bouncersBowledInOver: number }) {
   const [bowlType, setBowlType] = useState<BowlType>('Pace');
   const [line, setLine] = useState<Line>('Off Stump');
   const [length, setLength] = useState<Length>('Good Length');
@@ -96,15 +96,18 @@ export default function BowlingUI({ onSubmit, ballReady }: { onSubmit: (action: 
       <div className="mb-6">
          <p className="text-sm text-gray-400 mb-2">Length</p>
          <div className="flex flex-wrap gap-2">
-            {lengths.map(l => (
+            {lengths.map(l => {
+              const disabled = l === 'Bouncer' && bouncersBowledInOver >= 2;
+              return (
               <button 
                 key={l}
-                onClick={() => setLength(l)}
-                className={`px-3 py-1 text-sm rounded-full ${length === l ? 'bg-red-500 text-white' : 'bg-gray-700'}`}
+                onClick={() => !disabled && setLength(l)}
+                disabled={disabled}
+                className={`px-3 py-1 text-sm rounded-full ${length === l ? 'bg-red-500 text-white' : 'bg-gray-700'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {l}
+                {l} {disabled && '(Max 2)'}
               </button>
-            ))}
+            )})}
          </div>
       </div>
 
