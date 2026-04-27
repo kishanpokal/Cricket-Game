@@ -126,19 +126,9 @@ export default function Game() {
   }
 
   return (
-    <div
-      className="h-screen flex flex-col bg-[var(--color-night-sky)] text-white overflow-hidden"
-      style={{
-        display: 'grid',
-        gridTemplateRows: 'auto auto 1fr auto',
-        gridTemplateAreas: `"topbar" "scoreboard" "field" "commentary"`,
-      }}
-    >
+    <div className="h-screen flex flex-col bg-[var(--color-night-sky)] text-white overflow-hidden">
       {/* Top bar */}
-      <div
-        className="flex items-center justify-between px-3 py-1.5 bg-gray-950 border-b border-gray-800"
-        style={{ gridArea: 'topbar' }}
-      >
+      <div className="flex items-center justify-between px-3 py-1.5 bg-gray-950 border-b border-gray-800 flex-shrink-0">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className={`w-2 h-2 rounded-full ${opponentOnline ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
           <span className="text-[10px] sm:text-xs text-gray-400">
@@ -150,78 +140,206 @@ export default function Game() {
       </div>
 
       {/* Scoreboard — sticky top */}
-      <div style={{ gridArea: 'scoreboard' }}>
+      <div className="flex-shrink-0">
         <Scoreboard matchState={matchState} />
       </div>
 
-      {/* Field area */}
-      <div
-        className="relative flex flex-col overflow-hidden"
-        style={{
-          gridArea: 'field',
-          background: 'linear-gradient(to bottom, var(--color-pitch-green-dark), var(--color-pitch-green))',
-        }}
-      >
-        {/* Ambient grass sway */}
+      {/* Main content area: vertical on mobile, horizontal on desktop */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Field area — takes full width on mobile, left side on desktop */}
         <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ animation: 'grass-sway 4s ease-in-out infinite' }}
-        />
-
-        {/* Cloud shadow drift */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-5"
+          className="relative flex flex-col overflow-hidden flex-1 lg:flex-[3]"
           style={{
-            background: 'radial-gradient(ellipse 300px 100px at center, rgba(0,0,0,0.4), transparent)',
-            animation: 'cloud-drift 20s linear infinite',
+            background: 'linear-gradient(to bottom, var(--color-pitch-green-dark), var(--color-pitch-green))',
           }}
-        />
+        >
+          {/* Ambient grass sway */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ animation: 'grass-sway 4s ease-in-out infinite' }}
+          />
 
-        {/* Stadium gradient */}
-        <div
-          className="absolute inset-0 opacity-20 pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(circle, transparent 20%, #000 120%)' }}
-        />
+          {/* Cloud shadow drift */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-5"
+            style={{
+              background: 'radial-gradient(ellipse 300px 100px at center, rgba(0,0,0,0.4), transparent)',
+              animation: 'cloud-drift 20s linear infinite',
+            }}
+          />
 
-        {/* Pitch strip */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-[200px] sm:w-48 sm:h-[300px] bg-[var(--color-soil)]/30 rounded-xl border-2 border-white/20 pointer-events-none">
-          {/* Stump marks */}
-          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
-            {[0, 1, 2].map(i => <div key={i} className="w-0.5 h-3 bg-white/40 rounded" />)}
-          </div>
-          <div className="absolute top-1 left-1/2 -translate-x-1/2 flex gap-1">
-            {[0, 1, 2].map(i => <div key={i} className="w-0.5 h-3 bg-white/40 rounded" />)}
-          </div>
-        </div>
+          {/* Stadium gradient */}
+          <div
+            className="absolute inset-0 opacity-20 pointer-events-none"
+            style={{ backgroundImage: 'radial-gradient(circle, transparent 20%, #000 120%)' }}
+          />
 
-        {/* Ball result overlay */}
-        <BallResultOverlay matchState={matchState} />
-
-        {/* Opponent disconnected warning */}
-        {!opponentOnline && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40" style={{ zIndex: 'var(--z-overlay)' as string }}>
-            <div className="bg-gray-800 border border-yellow-600/50 rounded-2xl p-5 text-center shadow-2xl animate-[scale-in_0.2s_ease-out]">
-              <div className="text-3xl mb-2" aria-hidden="true">⚠️</div>
-              <p className="text-yellow-400 font-bold text-sm sm:text-base">Opponent disconnected</p>
-              <p className="text-gray-400 text-xs mt-1">Waiting for reconnection...</p>
-              <p className="text-gray-500 text-[10px] mt-0.5">Auto-forfeit in 90s</p>
+          {/* Pitch strip */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-[200px] sm:w-48 sm:h-[300px] lg:w-56 lg:h-[360px] bg-[var(--color-soil)]/30 rounded-xl border-2 border-white/20 pointer-events-none">
+            {/* Stump marks */}
+            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
+              {[0, 1, 2].map(i => <div key={i} className="w-0.5 h-3 bg-white/40 rounded" />)}
+            </div>
+            <div className="absolute top-1 left-1/2 -translate-x-1/2 flex gap-1">
+              {[0, 1, 2].map(i => <div key={i} className="w-0.5 h-3 bg-white/40 rounded" />)}
             </div>
           </div>
-        )}
 
-        {/* Controls at bottom of field */}
-        <div className="w-full max-w-xl mx-auto px-2 sm:px-4 pb-2 sm:pb-4 mt-auto pt-1 relative" style={{ zIndex: 'var(--z-ui)' as string, maxHeight: '55vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          {amIBatting ? (
-            <BattingUI onSubmit={submitAction} ballReady={ballReady} />
-          ) : (
-            <BowlingUI onSubmit={submitAction} ballReady={ballReady} bouncersBowledInOver={bouncersBowledInOver} />
+          {/* ── DESKTOP ONLY: Batter & Bowler figures on pitch ── */}
+          {/* Batter — bottom-left of pitch */}
+          <div className="hidden lg:block absolute pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(calc(-50% - 100px), calc(-50% + 80px))' }}>
+            <div style={{ animation: 'batter-ready 3s ease-in-out infinite' }}>
+              <svg width="70" height="120" viewBox="0 0 70 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Glow */}
+                <defs>
+                  <filter id="batter-glow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
+                </defs>
+                <g filter="url(#batter-glow)" opacity="0.85">
+                  {/* Head */}
+                  <circle cx="30" cy="14" r="8" fill="white" opacity="0.9" />
+                  {/* Helmet visor */}
+                  <path d="M22 12 Q30 8 38 12" stroke="#3b82f6" strokeWidth="2" fill="none" opacity="0.7" />
+                  {/* Body */}
+                  <line x1="30" y1="22" x2="30" y2="55" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.85" />
+                  {/* Front leg (bent, ready stance) */}
+                  <path d="M30 55 L22 80 L18 100" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.8" />
+                  {/* Back leg */}
+                  <path d="M30 55 L38 78 L40 100" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.8" />
+                  {/* Front arm (holding bat) */}
+                  <path d="M30 30 L20 42 L14 38" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.8" />
+                  {/* Back arm */}
+                  <path d="M30 30 L40 40 L46 36" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.8" />
+                  {/* Bat */}
+                  <path d="M14 38 L8 18 L5 16" stroke="#f0b429" strokeWidth="3" strokeLinecap="round" fill="none" />
+                  <rect x="3" y="4" width="5" height="14" rx="1.5" fill="#f0b429" opacity="0.9" transform="rotate(-10 5 10)" />
+                  {/* Pads */}
+                  <rect x="16" y="82" width="6" height="16" rx="2" fill="white" opacity="0.3" />
+                  <rect x="36" y="80" width="6" height="16" rx="2" fill="white" opacity="0.3" />
+                </g>
+                {/* Label */}
+                <text x="30" y="116" textAnchor="middle" fill="#3b82f6" fontSize="8" fontWeight="bold" opacity="0.7" fontFamily="Inter, sans-serif">BATTER</text>
+              </svg>
+            </div>
+          </div>
+
+          {/* Bowler — top-right of pitch */}
+          <div className="hidden lg:block absolute pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(calc(-50% + 100px), calc(-50% - 140px))' }}>
+            <div style={{ animation: 'bowler-breathe 2.5s ease-in-out infinite' }}>
+              <svg width="70" height="120" viewBox="0 0 70 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Glow */}
+                <defs>
+                  <filter id="bowler-glow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
+                </defs>
+                <g filter="url(#bowler-glow)" opacity="0.85">
+                  {/* Head */}
+                  <circle cx="35" cy="16" r="8" fill="white" opacity="0.9" />
+                  {/* Body (leaning forward in delivery stride) */}
+                  <line x1="35" y1="24" x2="32" y2="58" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.85" />
+                  {/* Bowling arm (high, about to release) */}
+                  <path d="M35 32 L50 18 L55 8" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.8" />
+                  {/* Ball in hand */}
+                  <circle cx="55" cy="7" r="3.5" fill="#c0392b" opacity="0.9" />
+                  <path d="M53 5 Q55 3 57 5" stroke="white" strokeWidth="0.8" fill="none" opacity="0.6" />
+                  {/* Non-bowling arm */}
+                  <path d="M35 32 L22 44 L18 42" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.8" />
+                  {/* Front leg (landing, stretched forward) */}
+                  <path d="M32 58 L22 82 L18 102" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.8" />
+                  {/* Back leg (dragging behind) */}
+                  <path d="M32 58 L42 76 L50 94" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.8" />
+                  {/* Shoes */}
+                  <ellipse cx="17" cy="103" rx="5" ry="2.5" fill="white" opacity="0.3" />
+                  <ellipse cx="51" cy="95" rx="5" ry="2.5" fill="white" opacity="0.3" />
+                </g>
+                {/* Label */}
+                <text x="35" y="116" textAnchor="middle" fill="#ef4444" fontSize="8" fontWeight="bold" opacity="0.7" fontFamily="Inter, sans-serif">BOWLER</text>
+              </svg>
+            </div>
+          </div>
+
+          {/* Fielder dots — DESKTOP ONLY */}
+          <div className="hidden lg:block absolute inset-0 pointer-events-none">
+            {/* Boundary ring */}
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <ellipse cx="50" cy="50" rx="42" ry="42" fill="none" stroke="white" strokeWidth="0.15" opacity="0.15" strokeDasharray="1 2" />
+            </svg>
+            {/* Fielder positions - small dots */}
+            {[
+              { x: '18%', y: '25%' }, // Point
+              { x: '78%', y: '22%' }, // Third man
+              { x: '12%', y: '55%' }, // Cover
+              { x: '85%', y: '50%' }, // Fine leg
+              { x: '25%', y: '78%' }, // Mid-on
+              { x: '72%', y: '80%' }, // Mid-wicket
+              { x: '50%', y: '15%' }, // Long-off
+              { x: '15%', y: '40%' }, // Extra cover
+              { x: '82%', y: '35%' }, // Slip
+            ].map((pos, i) => (
+              <div
+                key={i}
+                className="absolute w-2.5 h-2.5 rounded-full bg-white/20 border border-white/30"
+                style={{ left: pos.x, top: pos.y, animation: `fielder-shift ${3 + i * 0.5}s ease-in-out infinite alternate` }}
+              />
+            ))}
+          </div>
+
+          {/* Ball result overlay */}
+          <BallResultOverlay matchState={matchState} />
+
+          {/* Opponent disconnected warning */}
+          {!opponentOnline && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40" style={{ zIndex: 'var(--z-overlay)' as string }}>
+              <div className="bg-gray-800 border border-yellow-600/50 rounded-2xl p-5 text-center shadow-2xl animate-[scale-in_0.2s_ease-out]">
+                <div className="text-3xl mb-2" aria-hidden="true">⚠️</div>
+                <p className="text-yellow-400 font-bold text-sm sm:text-base">Opponent disconnected</p>
+                <p className="text-gray-400 text-xs mt-1">Waiting for reconnection...</p>
+                <p className="text-gray-500 text-[10px] mt-0.5">Auto-forfeit in 90s</p>
+              </div>
+            </div>
           )}
-        </div>
-      </div>
 
-      {/* Commentary */}
-      <div style={{ gridArea: 'commentary' }}>
-        <Commentary matchState={matchState} />
+          {/* Controls at bottom of field — MOBILE ONLY */}
+          <div className="lg:hidden w-full max-w-xl mx-auto px-2 sm:px-4 pb-2 sm:pb-4 mt-auto pt-1 relative" style={{ zIndex: 'var(--z-ui)' as string, maxHeight: '55vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            {amIBatting ? (
+              <BattingUI onSubmit={submitAction} ballReady={ballReady} />
+            ) : (
+              <BowlingUI onSubmit={submitAction} ballReady={ballReady} bouncersBowledInOver={bouncersBowledInOver} />
+            )}
+          </div>
+
+          {/* Commentary — MOBILE ONLY (at bottom of field) */}
+          <div className="lg:hidden flex-shrink-0">
+            <Commentary matchState={matchState} />
+          </div>
+        </div>
+
+        {/* Right sidebar — DESKTOP ONLY */}
+        <div className="hidden lg:flex lg:flex-col lg:flex-[2] lg:max-w-[420px] lg:min-w-[340px] border-l border-gray-800/60 bg-gradient-to-b from-gray-950 to-[var(--color-night-sky)]">
+          {/* Controls panel */}
+          <div className="flex-1 overflow-y-auto p-4 xl:p-5" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="mb-3">
+              <h2 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                {amIBatting ? 'Your Batting Controls' : 'Your Bowling Controls'}
+              </h2>
+            </div>
+            {amIBatting ? (
+              <BattingUI onSubmit={submitAction} ballReady={ballReady} />
+            ) : (
+              <BowlingUI onSubmit={submitAction} ballReady={ballReady} bouncersBowledInOver={bouncersBowledInOver} />
+            )}
+          </div>
+
+          {/* Commentary panel at bottom of sidebar */}
+          <div className="flex-shrink-0 border-t border-gray-800/60">
+            <Commentary matchState={matchState} />
+          </div>
+        </div>
       </div>
     </div>
   );

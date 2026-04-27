@@ -157,6 +157,21 @@
     from { stroke-dashoffset: 0; }
     to { stroke-dashoffset: 283; }
   }
+
+  @keyframes batter-ready {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-2px) rotate(0.5deg); }
+  }
+
+  @keyframes bowler-breathe {
+    0%, 100% { transform: scale(1) translateY(0); }
+    50% { transform: scale(1.02) translateY(-1px); }
+  }
+
+  @keyframes fielder-shift {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(3px, 2px); }
+  }
 }
 
 /* ─── Base Styles ─────────────────────────────────────────────────────────── */
