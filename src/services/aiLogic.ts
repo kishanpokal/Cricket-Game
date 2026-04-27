@@ -29,6 +29,7 @@ export const calculateBallOutcome = (
     score: number;
     wickets: number;
     target?: number;
+    isFreeHit?: boolean;
   }
 ): BallOutcome => {
   const { shotType = 'Defensive', power = 50 } = batAction;
@@ -36,6 +37,16 @@ export const calculateBallOutcome = (
 
   let baseRisk = 35; // Base probability of getting out (out of 1000) — increased from 10
   let baseRunPotential = 0; // 0 to 100 for hitting boundaries
+
+  // --- No Ball Calculation ---
+  let isNoBall = false;
+  // 5% chance for pace, 2% for spin/swing
+  const nbRoll = Math.random() * 100;
+  if (bowlType === 'Pace' && nbRoll < 5) {
+    isNoBall = true;
+  } else if (nbRoll < 2) {
+    isNoBall = true;
+  }
 
   // 1. Weather & Pitch effects
   if (weather === 'Overcast' && bowlType === 'Swing') {
@@ -167,13 +178,28 @@ export const calculateBallOutcome = (
     baseRunPotential += 10; // But also more aggressive
   }
 
+  // If Free Hit, essentially 0 risk of normal dismissal
+  if (matchContext.isFreeHit) {
+    baseRisk = 5; // tiny chance for run out
+    baseRunPotential += 20; // batter goes hard
+  }
+
   // Final Risk & Runs calculation
-  // Bound the risk and run potential
   baseRisk = Math.max(5, Math.min(baseRisk, 500)); // Min 0.5%, max 50% chance of wicket
   baseRunPotential = Math.max(0, Math.min(baseRunPotential, 100));
 
   const randomRoll = Math.random() * 1000;
-  const isWicket = randomRoll < baseRisk;
+  let isWicket = randomRoll < baseRisk;
+
+  // On Free Hit, can only be run out
+  if (isWicket && matchContext.isFreeHit) {
+    const runOutRoll = Math.random();
+    if (runOutRoll < 0.1) {
+      isWicket = true; // 10% chance it's actually a run out
+    } else {
+      isWicket = false; // safe!
+    }
+  }
 
   let runs = 0;
   let dismissalType: DismissalType = null;
@@ -181,18 +207,22 @@ export const calculateBallOutcome = (
   let commentary = '';
 
   if (isWicket) {
-    const wRoll = Math.random();
-    // Dismissal type depends on delivery and shot
-    if (length === 'Yorker') {
-      dismissalType = wRoll > 0.5 ? 'Bowled' : 'LBW';
-    } else if (length === 'Bouncer') {
-      dismissalType = wRoll > 0.3 ? 'Caught' : 'Hit Wicket';
-    } else if (line === 'Middle' && length === 'Good Length') {
-      dismissalType = wRoll > 0.6 ? 'LBW' : wRoll > 0.3 ? 'Bowled' : 'Caught';
-    } else if (shotType === 'Sweep' || shotType === 'Slog') {
-      dismissalType = wRoll > 0.5 ? 'Caught' : wRoll > 0.2 ? 'Stumped' : 'Bowled';
+    if (matchContext.isFreeHit) {
+      dismissalType = 'Run Out';
     } else {
-      dismissalType = wRoll > 0.5 ? 'Caught' : wRoll > 0.3 ? 'Bowled' : wRoll > 0.15 ? 'LBW' : 'Run Out';
+      const wRoll = Math.random();
+      // Dismissal type depends on delivery and shot
+      if (length === 'Yorker') {
+        dismissalType = wRoll > 0.5 ? 'Bowled' : 'LBW';
+      } else if (length === 'Bouncer') {
+        dismissalType = wRoll > 0.3 ? 'Caught' : 'Hit Wicket';
+      } else if (line === 'Middle' && length === 'Good Length') {
+        dismissalType = wRoll > 0.6 ? 'LBW' : wRoll > 0.3 ? 'Bowled' : 'Caught';
+      } else if (shotType === 'Sweep' || shotType === 'Slog') {
+        dismissalType = wRoll > 0.5 ? 'Caught' : wRoll > 0.2 ? 'Stumped' : 'Bowled';
+      } else {
+        dismissalType = wRoll > 0.5 ? 'Caught' : wRoll > 0.3 ? 'Bowled' : wRoll > 0.15 ? 'LBW' : 'Run Out';
+      }
     }
 
     special = 'WICKET';
@@ -221,13 +251,21 @@ export const calculateBallOutcome = (
     }
   }
 
+  if (isNoBall) {
+    commentary = `NO BALL! Overstepping by the bowler. ` + commentary;
+  } else if (matchContext.isFreeHit) {
+    commentary = `(Free Hit) ` + commentary;
+  }
+
   return {
     runs,
     wicket: isWicket,
     dismissalType,
     commentary,
     special,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    isNoBall,
+    isFreeHit: matchContext.isFreeHit
   };
 };
 

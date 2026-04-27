@@ -58,6 +58,8 @@ export type BallOutcome = {
   commentary: string;
   special: 'SIX' | 'FOUR' | 'WICKET' | 'DOT' | null;
   timestamp: number;
+  isNoBall?: boolean;
+  isFreeHit?: boolean;
 };
 
 export type InningsState = {
@@ -68,6 +70,7 @@ export type InningsState = {
   balls: number;
   ballLog: Array<BallOutcome & BallAction>;
   currentBall: BallAction;
+  isFreeHitNextBall?: boolean;
 };
 
 export type PitchType = 'Green' | 'Dusty' | 'Dead' | 'Hard';
@@ -87,6 +90,9 @@ export type MatchState = {
   toss?: TossState;
   innings1?: InningsState;
   innings2?: InningsState;
+  mainInnings1?: InningsState;
+  mainInnings2?: InningsState;
+  isSuperOver?: boolean;
   currentTurn?: string;
   lastUpdated: number;
   abandonedBy?: string;   // uid of player who left/disconnected

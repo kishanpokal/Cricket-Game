@@ -122,19 +122,32 @@ export const useMatch = (matchId: string | null) => {
              balls: currentInnings.balls, 
              score: currentInnings.score, 
              wickets: currentInnings.wickets,
-             target: currentMatch.innings1 && !isInnings1 ? currentMatch.innings1.score + 1 : undefined
+             target: currentMatch.innings1 && !isInnings1 ? currentMatch.innings1.score + 1 : undefined,
+             isFreeHit: currentInnings.isFreeHitNextBall
          }
      );
 
      // Update score
      const updatedInnings = { ...currentInnings };
+     
+     // Base runs
      updatedInnings.score += outcome.runs;
-     if (outcome.wicket) updatedInnings.wickets += 1;
-     updatedInnings.balls += 1;
-     if (updatedInnings.balls === 6) {
-         updatedInnings.overs += 1;
-         updatedInnings.balls = 0;
+     if (outcome.isNoBall) {
+       updatedInnings.score += 1; // Penalty run for No Ball
      }
+
+     if (outcome.wicket) updatedInnings.wickets += 1;
+     
+     // Ball only counts if it's NOT a no ball
+     if (!outcome.isNoBall) {
+       updatedInnings.balls += 1;
+       if (updatedInnings.balls === 6) {
+           updatedInnings.overs += 1;
+           updatedInnings.balls = 0;
+       }
+     }
+
+     updatedInnings.isFreeHitNextBall = outcome.isNoBall;
 
      updatedInnings.ballLog = [...(currentInnings.ballLog || []), { ...outcome, ...batAction, ...bowlAction }];
      updatedInnings.currentBall = batAction;
@@ -147,6 +160,7 @@ export const useMatch = (matchId: string | null) => {
 
      let newStatus = currentMatch.status;
      let winner: string | null = null;
+     let isSuperOverTriggered = false;
 
      if (isInnings1 && (allOut || oversComplete)) {
        // Innings 1 over → go to innings break
@@ -154,22 +168,23 @@ export const useMatch = (matchId: string | null) => {
      }
 
      if (!isInnings1 && (allOut || oversComplete || targetChased)) {
-       // Innings 2 over → match finished
-       newStatus = 'finished';
-       
-       // Determine winner
+       // Innings 2 over
        const innings1Score = currentMatch.innings1?.score ?? 0;
        const innings2Score = updatedInnings.score;
        
        if (targetChased) {
          // Batting team in innings 2 wins (chased target)
          winner = updatedInnings.battingTeam;
-       } else if (innings2Score < innings1Score + 1) {
+         newStatus = 'finished';
+       } else if (innings2Score < innings1Score) {
          // Batting team in innings 1 wins (defended target)
-         // innings1.battingTeam is the first batter's uid
          winner = currentMatch.innings1?.battingTeam || null;
+         newStatus = 'finished';
+       } else if (innings2Score === innings1Score) {
+         // TIE! SUPER OVER!
+         isSuperOverTriggered = true;
+         newStatus = 'innings_break'; // Go to break to prepare for Super Over
        }
-       // If tied (innings2Score === innings1Score), winner stays null (draw)
      }
 
      // Build the database update
@@ -185,35 +200,74 @@ export const useMatch = (matchId: string | null) => {
        dbUpdate.winner = winner;
      }
 
-     // If innings break, auto-start innings 2 after delay
+     if (isSuperOverTriggered) {
+       dbUpdate.isSuperOver = true;
+       // Move current innings to history so we don't lose the scoreboard stats for main match
+       // If it's already a super over and they tie again, we just override.
+       if (!currentMatch.isSuperOver) {
+         dbUpdate.mainInnings1 = currentMatch.innings1;
+         dbUpdate.mainInnings2 = updatedInnings;
+       }
+       dbUpdate.customOvers = 1; // Force max 1 over
+     }
+
+     // If innings break, auto-start innings 2 (or Super Over) after delay
      if (newStatus === 'innings_break') {
-       // First, push the innings 1 result
+       // First, push the innings result
        setTimeout(async () => {
          await update(ref(rtdb, `matches/${currentMatchId}`), dbUpdate);
          
-         // After showing innings break screen for 3 seconds, start innings 2
+         // After showing innings break screen for 4 seconds, start next innings
          setTimeout(async () => {
-           // Create empty innings 2 with swapped batting team
-           const innings2BattingTeam = isP1BattingInnings1 
-             ? (currentMatch.player2?.uid || '')
-             : currentMatch.player1.uid;
+           // For super over, the team that batted second will now bat first (swap again? Actually let's just make it same as innings 2 starting, so p2 or p1)
+           // Standard logic: if it was normal innings break, innings2 batting team is whoever bowled in innings1.
+           // If it's a super over triggered, we are moving from Innings 2 to Innings 1 of Super Over. So we need to reset innings1.
+           
+           if (isSuperOverTriggered) {
+             // Start Super Over Innings 1
+             // The team that batted second in main match usually bats first in super over.
+             const superOverBattingTeam = updatedInnings.battingTeam;
+             
+             const freshInnings1: InningsState = {
+               battingTeam: superOverBattingTeam,
+               score: 0,
+               wickets: 0,
+               overs: 0,
+               balls: 0,
+               ballLog: [],
+               currentBall: {}
+             };
 
-           const freshInnings2: InningsState = {
-             battingTeam: innings2BattingTeam,
-             score: 0,
-             wickets: 0,
-             overs: 0,
-             balls: 0,
-             ballLog: [],
-             currentBall: {}
-           };
+             await update(ref(rtdb, `matches/${currentMatchId}`), {
+               innings1: freshInnings1,
+               innings2: null, // clear innings 2 for super over
+               status: 'batting',
+               actions: null,
+               lastUpdated: Date.now()
+             });
+           } else {
+             // Normal Innings 2 Start
+             const innings2BattingTeam = isP1BattingInnings1 
+               ? (currentMatch.player2?.uid || '')
+               : currentMatch.player1.uid;
 
-           await update(ref(rtdb, `matches/${currentMatchId}`), {
-             innings2: freshInnings2,
-             status: 'batting',
-             actions: null,
-             lastUpdated: Date.now()
-           });
+             const freshInnings2: InningsState = {
+               battingTeam: innings2BattingTeam,
+               score: 0,
+               wickets: 0,
+               overs: 0,
+               balls: 0,
+               ballLog: [],
+               currentBall: {}
+             };
+
+             await update(ref(rtdb, `matches/${currentMatchId}`), {
+               innings2: freshInnings2,
+               status: 'batting',
+               actions: null,
+               lastUpdated: Date.now()
+             });
+           }
          }, 4000); // 4 second innings break screen
        }, 1500);
      } else {

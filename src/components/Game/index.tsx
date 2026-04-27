@@ -48,13 +48,16 @@ export default function Game() {
       });
     }
 
+    // Save active match ID for reconnection
+    localStorage.setItem('activeMatchId', matchId);
+
     return () => {
       cleanupPresence();
       unsubPresence?.();
     };
   }, [matchId, user?.uid, matchState?.player1?.uid, matchState?.player2?.uid]);
 
-  // Auto-forfeit if opponent disconnects for more than 10 seconds
+  // Auto-forfeit if opponent disconnects for more than 90 seconds
   useEffect(() => {
     if (opponentOnline || !matchId || !user || !matchState) return;
     if (matchState.status === 'finished') return;
@@ -67,7 +70,7 @@ export default function Game() {
       if (opponentUid) {
         leaveMatch(matchId, opponentUid);
       }
-    }, 10000);
+    }, 90000); // Increased from 10s to 90s to allow reconnecting on refresh
 
     return () => clearTimeout(timer);
   }, [opponentOnline, matchId, user, matchState?.status]);
@@ -87,6 +90,7 @@ export default function Game() {
   const handleLeaveMatch = async () => {
     if (!matchId || !user) return;
     await leaveMatch(matchId, user.uid);
+    localStorage.removeItem('activeMatchId');
     navigate('/');
   };
 
@@ -163,9 +167,29 @@ export default function Game() {
           <div className="bg-gray-800 rounded-2xl p-6 mb-8 w-full max-w-md border border-gray-700">
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm text-gray-400 uppercase tracking-wider font-bold">Match Summary</span>
-              <span className="text-sm text-gray-500">{maxOvers} overs</span>
+              <span className="text-sm text-gray-500">{matchState.isSuperOver ? 'SUPER OVER' : `${maxOvers} overs`}</span>
             </div>
+
+            {matchState.isSuperOver && matchState.mainInnings1 && (
+               <div className="mb-4 pb-4 border-b border-gray-700">
+                 <p className="text-xs text-gray-500 uppercase tracking-widest mb-2 font-bold">Main Match (Tied)</p>
+                 <div className="space-y-2">
+                   <div className="flex justify-between items-center text-sm text-gray-400">
+                     <span>{matchState.mainInnings1.battingTeam === matchState.player1.uid ? matchState.player1.displayName : matchState.player2?.displayName}</span>
+                     <span>{matchState.mainInnings1.score}/{matchState.mainInnings1.wickets}</span>
+                   </div>
+                   {matchState.mainInnings2 && (
+                     <div className="flex justify-between items-center text-sm text-gray-400">
+                       <span>{matchState.mainInnings2.battingTeam === matchState.player1.uid ? matchState.player1.displayName : matchState.player2?.displayName}</span>
+                       <span>{matchState.mainInnings2.score}/{matchState.mainInnings2.wickets}</span>
+                     </div>
+                   )}
+                 </div>
+               </div>
+            )}
+
             <div className="space-y-3">
+              {matchState.isSuperOver && <p className="text-xs text-yellow-500 uppercase tracking-widest font-bold">Super Over Score</p>}
               <div className="flex justify-between items-center p-3 bg-gray-900 rounded-xl">
                 <span className="font-semibold">{firstBatterName}</span>
                 <span className="text-2xl font-black">{i1Score}<span className="text-gray-500 text-lg">/{i1Wickets}</span></span>
@@ -180,7 +204,10 @@ export default function Game() {
           </div>
         )}
 
-        <button onClick={() => navigate('/')} className="px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-lg transition cursor-pointer">
+        <button onClick={() => {
+          localStorage.removeItem('activeMatchId');
+          navigate('/');
+        }} className="px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-lg transition cursor-pointer">
           Return to Lobby
         </button>
       </div>
@@ -202,36 +229,51 @@ export default function Game() {
     const firstBatterName = p1BattedFirst ? matchState.player1.displayName : matchState.player2?.displayName;
     const firstBatterScore = matchState.innings1?.score ?? 0;
     const firstBatterWickets = matchState.innings1?.wickets ?? 0;
+    
+    // If it's a super over, we know we just tied the match because innings2 exists during innings_break
+    const isStartOfSuperOver = matchState.isSuperOver && !!matchState.innings2;
 
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-6">
         <div className="text-6xl mb-6" style={{ animation: 'pulse 2s infinite' }}>🏏</div>
-        <h1 className="text-4xl font-bold mb-3 text-yellow-400">Innings Break</h1>
+        <h1 className={`text-4xl font-black mb-3 ${isStartOfSuperOver ? 'text-red-500' : 'text-yellow-400'}`}>
+          {isStartOfSuperOver ? 'SUPER OVER!' : 'Innings Break'}
+        </h1>
         
-        <div className="bg-gray-800 rounded-2xl p-6 mb-6 w-full max-w-md border border-gray-700 text-center">
-          <p className="text-gray-400 mb-2">1st Innings</p>
-          <p className="text-2xl font-bold mb-1">{firstBatterName}</p>
-          <p className="text-5xl font-black text-white">
-            {firstBatterScore}<span className="text-2xl text-gray-400">/{firstBatterWickets}</span>
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            ({matchState.innings1?.overs}.{matchState.innings1?.balls} overs)
-          </p>
-        </div>
+        {isStartOfSuperOver && (
+          <p className="text-gray-300 mb-6 text-center animate-pulse">The match is tied! We are going to a Super Over.</p>
+        )}
+        
+        {!isStartOfSuperOver && (
+          <div className="bg-gray-800 rounded-2xl p-6 mb-6 w-full max-w-md border border-gray-700 text-center">
+            <p className="text-gray-400 mb-2">1st Innings</p>
+            <p className="text-2xl font-bold mb-1">{firstBatterName}</p>
+            <p className="text-5xl font-black text-white">
+              {firstBatterScore}<span className="text-2xl text-gray-400">/{firstBatterWickets}</span>
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              ({matchState.innings1?.overs}.{matchState.innings1?.balls} overs)
+            </p>
+          </div>
+        )}
 
-        <div className="bg-yellow-900/30 border border-yellow-700/50 rounded-xl p-4 mb-6 text-center w-full max-w-md">
-          <p className="text-yellow-500 font-bold text-lg mb-1">
-            🎯 Target: {target} runs
-          </p>
-          <p className="text-gray-400 text-sm">
-            in {maxOvers} overs ({maxWickets} wickets in hand)
-          </p>
-        </div>
+        {!isStartOfSuperOver && (
+          <div className="bg-yellow-900/30 border border-yellow-700/50 rounded-xl p-4 mb-6 text-center w-full max-w-md">
+            <p className="text-yellow-500 font-bold text-lg mb-1">
+              🎯 Target: {target} runs
+            </p>
+            <p className="text-gray-400 text-sm">
+              in {maxOvers} overs ({maxWickets} wickets in hand)
+            </p>
+          </div>
+        )}
 
         <p className="text-lg text-gray-300 animate-pulse">
-          {iWillBatNext 
-            ? "You're batting next — get ready to chase! 🏏" 
-            : "You're bowling next — defend the target! 🎯"}
+          {isStartOfSuperOver
+            ? "Get ready for the ultimate showdown! ⚔️"
+            : (iWillBatNext 
+              ? "You're batting next — get ready to chase! 🏏" 
+              : "You're bowling next — defend the target! 🎯")}
         </p>
         
         <p className="text-sm text-gray-500 mt-4">Starting in a few seconds...</p>
@@ -278,10 +320,10 @@ export default function Game() {
 
       <Scoreboard matchState={matchState} />
       
-      <div className="flex-1 relative bg-gradient-to-b from-green-800 to-green-600 border-t-4 border-b-4 border-white/20">
+      <div className="flex-1 relative bg-gradient-to-b from-green-800 to-green-600 border-t-4 border-b-4 border-white/20 flex flex-col overflow-y-auto">
         {/* Simple stadium representation */}
         <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, transparent 20%, #000 120%)' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-[400px] bg-yellow-900/40 rounded-xl border-4 border-white/30" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-[300px] sm:w-64 sm:h-[400px] bg-yellow-900/40 rounded-xl border-4 border-white/30 pointer-events-none" />
         
         {/* Ball result animation */}
         <BallResultOverlay matchState={matchState} />
@@ -298,8 +340,8 @@ export default function Game() {
           </div>
         )}
 
-        {/* Center UI block for action */}
-        <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-2 sm:px-4 z-10">
+        {/* UI block for action - Using relative + mt-auto to naturally rest at bottom without overlapping */}
+        <div className="w-full max-w-2xl mx-auto px-2 sm:px-4 z-10 pb-4 sm:pb-8 mt-auto pt-4 relative">
            {amIBatting ? (
               <BattingUI onSubmit={submitAction} ballReady={ballReady} />
            ) : (
@@ -307,8 +349,6 @@ export default function Game() {
            )}
         </div>
       </div>
-
-      <Commentary matchState={matchState} />
     </div>
   );
 }

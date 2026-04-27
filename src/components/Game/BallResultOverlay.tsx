@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { MatchState } from '../../types/cricket';
+import { playBatHit, speakCommentary, startCrowdNoise, cheerCrowd } from '../../utils/audio';
 
 interface BallResultOverlayProps {
   matchState: MatchState;
@@ -9,6 +10,21 @@ export default function BallResultOverlay({ matchState }: BallResultOverlayProps
   const [show, setShow] = useState(false);
   const [result, setResult] = useState<{ type: string; text: string; color: string; emoji: string } | null>(null);
   const [lastBallCount, setLastBallCount] = useState(0);
+
+  // Initialize crowd noise (browsers may require an interaction first, but we call it here so it's ready)
+  useEffect(() => {
+    const handleInteraction = () => {
+      startCrowdNoise();
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+    };
+    window.addEventListener('click', handleInteraction);
+    window.addEventListener('touchstart', handleInteraction);
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+    };
+  }, []);
 
   // Detect new ball results
   useEffect(() => {
@@ -27,14 +43,24 @@ export default function BallResultOverlay({ matchState }: BallResultOverlayProps
     if (!lastBall) return;
 
     let resultData: { type: string; text: string; color: string; emoji: string } | null = null;
+    let isBoundaryOrWicket = false;
 
-    if (lastBall.special === 'WICKET') {
+    if (lastBall.isNoBall) {
+      resultData = {
+        type: 'NO BALL!',
+        text: `+${lastBall.runs + 1} RUNS & FREE HIT`,
+        color: 'text-orange-500',
+        emoji: '🚨'
+      };
+      isBoundaryOrWicket = true; // trigger cheer
+    } else if (lastBall.special === 'WICKET') {
       resultData = {
         type: 'WICKET',
         text: lastBall.dismissalType || 'OUT!',
         color: 'text-red-500',
         emoji: '🔴'
       };
+      isBoundaryOrWicket = true;
     } else if (lastBall.special === 'SIX') {
       resultData = {
         type: 'SIX',
@@ -42,6 +68,7 @@ export default function BallResultOverlay({ matchState }: BallResultOverlayProps
         color: 'text-purple-400',
         emoji: '💥'
       };
+      isBoundaryOrWicket = true;
     } else if (lastBall.special === 'FOUR') {
       resultData = {
         type: 'FOUR',
@@ -49,6 +76,7 @@ export default function BallResultOverlay({ matchState }: BallResultOverlayProps
         color: 'text-green-400',
         emoji: '🏏'
       };
+      isBoundaryOrWicket = true;
     } else if (lastBall.runs === 3) {
       resultData = {
         type: '3',
@@ -80,6 +108,15 @@ export default function BallResultOverlay({ matchState }: BallResultOverlayProps
     }
 
     if (resultData) {
+      // Play Audio
+      playBatHit();
+      if (lastBall.commentary) {
+        speakCommentary(lastBall.commentary);
+      }
+      if (isBoundaryOrWicket) {
+        cheerCrowd();
+      }
+
       setResult(resultData);
       setShow(true);
 

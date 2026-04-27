@@ -6,7 +6,7 @@ export default function Commentary({ matchState }: { matchState: MatchState }) {
 
   if (!currentInnings || !currentInnings.ballLog || currentInnings.ballLog.length === 0) {
     return (
-      <div className="bg-gray-800 p-4 border-t border-gray-700 h-48 overflow-y-auto flex items-center justify-center text-gray-500 italic">
+      <div className="bg-gray-800 p-4 border-t border-gray-700 h-28 sm:h-48 overflow-y-auto flex items-center justify-center text-gray-500 italic z-20">
         Match is about to begin.
       </div>
     );
@@ -16,17 +16,17 @@ export default function Commentary({ matchState }: { matchState: MatchState }) {
   const recentLogs = [...(currentInnings.ballLog || [])].reverse().slice(0, 5);
 
   return (
-    <div className="bg-gray-800 p-4 border-t border-gray-700 h-48 overflow-y-auto z-20">
-      <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-3">Live Commentary</h3>
-      <div className="space-y-3">
+    <div className="bg-gray-800 p-4 border-t border-gray-700 h-28 sm:h-48 overflow-y-auto z-20">
+      <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 sm:mb-3">Live Commentary</h3>
+      <div className="space-y-2 sm:space-y-3">
         {recentLogs.map((log, index) => (
-          <div key={index} className="flex gap-4 items-start border-b border-gray-700/50 pb-2 last:border-0">
-            <div className={`font-bold text-lg min-w-[3rem] text-center ${log.wicket ? 'text-red-500' : log.runs === 6 ? 'text-blue-400' : log.runs === 4 ? 'text-green-400' : 'text-gray-400'}`}>
+          <div key={index} className="flex gap-3 sm:gap-4 items-start border-b border-gray-700/50 pb-2 last:border-0">
+            <div className={`font-bold text-base sm:text-lg min-w-[2.5rem] sm:min-w-[3rem] text-center ${log.wicket ? 'text-red-500' : log.runs === 6 ? 'text-blue-400' : log.runs === 4 ? 'text-green-400' : 'text-gray-400'}`}>
                {log.wicket ? 'W' : log.runs}
             </div>
             <div>
-               <p className="text-gray-200 text-sm">{log.commentary}</p>
-               <p className="text-gray-500 text-xs mt-1">
+               <p className="text-gray-200 text-xs sm:text-sm">{log.commentary}</p>
+               <p className="text-gray-500 text-[10px] sm:text-xs mt-0.5 sm:mt-1">
                  {log.bowlType} ({log.length}, {log.line}) to {log.shotType}
                </p>
             </div>
