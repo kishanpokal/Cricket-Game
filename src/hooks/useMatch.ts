@@ -30,12 +30,13 @@ export const useMatch = (matchId: string | null) => {
   // Debounce lock to prevent double-tap submissions
   const submitLockRef = useRef(false);
 
+  // Single reset timeout ref — prevents competing resets
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => { matchStateRef.current = matchState; }, [matchState]);
   useEffect(() => { userRef.current = user; }, [user]);
 
-  // ─── Robust Reset: watch for new balls in the match state ──────────────────
-  // When a ball is processed and written to Firebase, the ball log length changes.
-  // This is the most reliable signal that the ball cycle is complete.
+  // Track ball log length for counter sync only (no reset — reset is handled by actions listener)
   const prevBallLogLenRef = useRef(0);
   useEffect(() => {
     if (!matchState) return;
@@ -43,25 +44,7 @@ export const useMatch = (matchId: string | null) => {
     const i2Len = matchState.innings2?.ballLog?.length ?? 0;
     const currentLen = i1Len + i2Len;
 
-    if (currentLen > prevBallLogLenRef.current) {
-      // A new ball was added — reset for next delivery
-      console.log('[useMatch] New ball detected in state, resetting for next delivery');
-      prevBallLogLenRef.current = currentLen;
-      
-      // Simple delay: just enough for the result overlay to show (1.5-2s)
-      const delayMs = 2000;
-      
-      setTimeout(() => {
-        myActionRef.current = null;
-        setMyAction(null);
-        setOpponentAction(null);
-        setBallReady(true);
-        setBallPhase('idle');
-        processingRef.current = false;
-        submitLockRef.current = false;
-      }, delayMs);
-    } else if (currentLen < prevBallLogLenRef.current) {
-      // Innings reset (e.g., super over) — sync the counter
+    if (currentLen !== prevBallLogLenRef.current) {
       prevBallLogLenRef.current = currentLen;
     }
   }, [matchState?.innings1?.ballLog?.length, matchState?.innings2?.ballLog?.length]);
@@ -386,15 +369,32 @@ export const useMatch = (matchId: string | null) => {
       const isPlayer1 = currentMatchState.player1.uid === user.uid;
 
       if (!actions) {
-        // Actions cleared — new ball starting
-        myActionRef.current = null;
-        setMyAction(null);
-        setOpponentAction(null);
-        processingRef.current = false;
-        submitLockRef.current = false;
-        setBallReady(true);
-        setBallPhase('idle');
+        // Actions cleared — ball was just processed.
+        // Cancel any pending reset first (prevent stacking)
+        if (resetTimeoutRef.current) {
+          clearTimeout(resetTimeoutRef.current);
+          resetTimeoutRef.current = null;
+        }
+
+        // Delay reset by 1.5s to let the BallResultOverlay show
+        resetTimeoutRef.current = setTimeout(() => {
+          myActionRef.current = null;
+          setMyAction(null);
+          setOpponentAction(null);
+          processingRef.current = false;
+          submitLockRef.current = false;
+          setBallReady(true);
+          setBallPhase('idle');
+          resetTimeoutRef.current = null;
+          console.log('[useMatch] Reset complete — ready for next ball');
+        }, 1500);
         return;
+      }
+
+      // If new actions arrive, cancel any pending reset (prevents stale reset from wiping new submissions)
+      if (resetTimeoutRef.current) {
+        clearTimeout(resetTimeoutRef.current);
+        resetTimeoutRef.current = null;
       }
 
       // Update opponent action display
