@@ -338,16 +338,27 @@ export default function Game() {
               <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 sm:p-8 text-center shadow-2xl max-w-sm w-full mx-4" style={{ animation: 'scale-in 0.3s ease-out' }}>
                 <div className="text-4xl mb-3" aria-hidden="true">🏏</div>
                 <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-wider mb-1">Over Complete</h2>
-                <p className="text-gray-400 text-sm mb-4">Over {totalOvers} finished</p>
-                {lastBallBowlType && (
-                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Last Over Bowled</p>
-                    <p className="text-lg font-bold text-red-400 flex items-center justify-center gap-2">
-                      <span>{lastBallBowlType === 'Pace' ? '🔥' : lastBallBowlType === 'Spin' ? '🌀' : '💨'}</span>
-                      {lastBallBowlType}
+                <p className="text-gray-400 text-sm mb-4">Last Over: {totalOvers}</p>
+                
+                <div className="flex gap-2 justify-center mb-4">
+                  {lastBallBowlType && (
+                    <div className="flex-1 bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+                      <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Last Over Type</p>
+                      <p className="text-sm sm:text-base font-bold text-red-400 flex items-center justify-center gap-1.5">
+                        <span>{lastBallBowlType === 'Pace' ? '🔥' : lastBallBowlType === 'Spin' ? '🌀' : '💨'}</span>
+                        {lastBallBowlType}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="flex-1 bg-blue-500/10 border border-blue-500/30 rounded-xl p-3">
+                    <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Next Over Type</p>
+                    <p className="text-xs font-bold text-blue-400 flex items-center justify-center h-full">
+                      {amIBatting ? 'Waiting for opponent...' : 'Select below!'}
                     </p>
                   </div>
-                )}
+                </div>
+
                 <div className="relative w-16 h-16 mx-auto mb-2">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 48 48">
                     <circle cx="24" cy="24" r="22" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
@@ -561,6 +572,15 @@ function InningsBreakScreen({
   matchState: import('../../types/cricket').MatchState;
   user: import('../../types/cricket').UserProfile;
 }) {
+  const [timeLeft, setTimeLeft] = useState(6);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const target = (matchState.innings1?.score ?? 0) + 1;
   const maxOvers = matchState.format === 'T20' ? 20 : matchState.format === 'ODI' ? 50 : matchState.customOvers;
   const maxWickets = getMaxWickets(maxOvers);
@@ -616,8 +636,8 @@ function InningsBreakScreen({
             : "You're bowling next — defend the target! 🎯")}
       </p>
 
-      <p className="text-xs text-gray-500 mt-3">
-        {isSuperOverBreak ? 'Starting in 5 seconds...' : 'Starting in a few seconds...'}
+      <p className="text-xs text-gray-500 mt-3 font-mono">
+        Starting in {timeLeft} seconds...
       </p>
     </div>
   );

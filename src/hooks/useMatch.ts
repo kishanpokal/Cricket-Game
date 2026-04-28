@@ -57,6 +57,66 @@ export const useMatch = (matchId: string | null) => {
     });
     return () => unsubscribe();
   }, [matchId, setMatchState]);
+  // ─── Safety Watchdog: ensure innings break ALWAYS transitions ───────────────
+  // If the processing player's setTimeout doesn't fire (e.g., tab backgrounded),
+  // this watchdog on the OTHER player will handle it after 6 seconds.
+  useEffect(() => {
+    if (!matchId || !matchState) return;
+    if (matchState.status !== 'innings_break' && matchState.status !== 'super_over_break') return;
+
+    const safetyDelay = 6000; // 6s safety — processBall uses 4s for break, 5s for super over
+    const safetyTimer = setTimeout(async () => {
+      const currentStatus = matchStateRef.current?.status;
+      if (currentStatus !== 'innings_break' && currentStatus !== 'super_over_break') return;
+
+      console.log('[useMatch] Safety watchdog: innings break still active after 6s, forcing transition');
+      const currentMatch = matchStateRef.current!;
+      const isP1BattingInnings1 = currentMatch.player1.role === 'bat';
+      const isSuperOver = currentMatch.status === 'super_over_break';
+
+      try {
+        if (isSuperOver) {
+          const superOverBattingTeam = currentMatch.innings2?.battingTeam || currentMatch.innings1?.battingTeam || '';
+          await update(ref(rtdb, `matches/${matchId}`), {
+            innings1: {
+              battingTeam: superOverBattingTeam,
+              score: 0, wickets: 0, overs: 0, balls: 0,
+              ballLog: [], currentBall: {},
+              runRateByOver: [], boundaryCount: { fours: 0, sixes: 0 },
+              dotBallStreak: 0, boundaryStreak: 0,
+              partnerships: [{ runs: 0, balls: 0 }],
+            },
+            innings2: null,
+            status: 'batting',
+            actions: null,
+            lastUpdated: Date.now(),
+          });
+        } else {
+          const innings2BattingTeam = isP1BattingInnings1
+            ? (currentMatch.player2?.uid || '')
+            : currentMatch.player1.uid;
+          await update(ref(rtdb, `matches/${matchId}`), {
+            innings2: {
+              battingTeam: innings2BattingTeam,
+              score: 0, wickets: 0, overs: 0, balls: 0,
+              ballLog: [], currentBall: {},
+              runRateByOver: [], boundaryCount: { fours: 0, sixes: 0 },
+              dotBallStreak: 0, boundaryStreak: 0,
+              partnerships: [{ runs: 0, balls: 0 }],
+            },
+            status: 'batting',
+            actions: null,
+            lastUpdated: Date.now(),
+          });
+        }
+        console.log('[useMatch] Safety watchdog: transition complete');
+      } catch (err) {
+        console.error('[useMatch] Safety watchdog: failed to transition:', err);
+      }
+    }, safetyDelay);
+
+    return () => clearTimeout(safetyTimer);
+  }, [matchId, matchState?.status]);
 
   // ─── Process Ball (stable function using only parameters, no closures) ──────
   const processBallRef = useRef(async (
@@ -273,6 +333,9 @@ export const useMatch = (matchId: string | null) => {
       }
 
       // ─── Handle innings transitions after the primary update ───────────
+      // BOTH players will attempt this transition. Firebase write is atomic,
+      // so whichever player writes first wins; the second write is a no-op
+      // (same data). This prevents stuck innings breaks if one browser is backgrounded.
       if (newStatus === 'innings_break' || newStatus === 'super_over_break') {
         const breakDuration = newStatus === 'super_over_break' ? 5000 : 4000;
         setTimeout(async () => {
@@ -361,10 +424,8 @@ export const useMatch = (matchId: string | null) => {
         return;
       }
 
-      // Skip processing during non-batting phases
-      if (currentMatchState.status !== 'batting') {
-        return;
-      }
+      // During non-batting phases, still allow state resets but don't process actions
+      const isBattingPhase = currentMatchState.status === 'batting';
 
       const isPlayer1 = currentMatchState.player1.uid === user.uid;
 
@@ -376,8 +437,22 @@ export const useMatch = (matchId: string | null) => {
           resetTimeoutRef.current = null;
         }
 
-        // Delay reset by 1.5s to let the BallResultOverlay show
-        resetTimeoutRef.current = setTimeout(() => {
+        // Only delay-reset during active batting (not during breaks)
+        if (isBattingPhase) {
+          // Delay reset by 1.5s to let the BallResultOverlay show
+          resetTimeoutRef.current = setTimeout(() => {
+            myActionRef.current = null;
+            setMyAction(null);
+            setOpponentAction(null);
+            processingRef.current = false;
+            submitLockRef.current = false;
+            setBallReady(true);
+            setBallPhase('idle');
+            resetTimeoutRef.current = null;
+            console.log('[useMatch] Reset complete — ready for next ball');
+          }, 1500);
+        } else {
+          // During innings break / finished, just clear state immediately
           myActionRef.current = null;
           setMyAction(null);
           setOpponentAction(null);
@@ -385,11 +460,12 @@ export const useMatch = (matchId: string | null) => {
           submitLockRef.current = false;
           setBallReady(true);
           setBallPhase('idle');
-          resetTimeoutRef.current = null;
-          console.log('[useMatch] Reset complete — ready for next ball');
-        }, 1500);
+        }
         return;
       }
+
+      // Don't process new actions during non-batting phases
+      if (!isBattingPhase) return;
 
       // If new actions arrive, cancel any pending reset (prevents stale reset from wiping new submissions)
       if (resetTimeoutRef.current) {
