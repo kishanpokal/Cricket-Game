@@ -20,6 +20,7 @@ const SHOTS: { type: ShotType; icon: string; label: string }[] = [
 
 export default memo(function BattingUI({ onSubmit, ballReady }: BattingUIProps) {
   const [shotType, setShotType] = useState<ShotType>('Defensive');
+  // Power is NOT reset between balls — persists from last selection
   const [power, setPower] = useState(50);
   const [timer, setTimer] = useState(15);
   const [timeLeft, setTimeLeft] = useState(15);
@@ -27,12 +28,12 @@ export default memo(function BattingUI({ onSubmit, ballReady }: BattingUIProps) 
   const timerRef = useRef<SVGCircleElement>(null);
   const lastTimerWarning = useRef(0);
 
-  // Reset when a new ball is ready
+  // Reset when a new ball is ready — but keep power from last ball
   useEffect(() => {
     if (ballReady) {
       setSubmitted(false);
       setShotType('Defensive');
-      setPower(50);
+      // Do NOT reset power — keep what they left at from last ball
       setTimer(15);
       setTimeLeft(15);
     }

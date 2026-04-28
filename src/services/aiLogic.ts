@@ -10,7 +10,6 @@ import type {
   Line,
   Length,
 } from '../types/cricket';
-import { generateAnimationSequence } from './animationEngine';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -260,32 +259,7 @@ export const calculateBallOutcome = (
       isFreeHit: false,
     };
     
-    const animationSequence = generateAnimationSequence({
-      batAction: { shotType: shotType as ShotType, power },
-      bowlAction: { bowlType: bowlType as BowlType, line: line as Line, length: length as Length },
-      outcome: {
-        runs: outcomeResult.runs,
-        wicket: outcomeResult.wicket,
-        dismissalType: outcomeResult.dismissalType,
-        special: outcomeResult.special,
-        isNoBall: outcomeResult.isNoBall || false,
-        isWide: outcomeResult.isWide || false,
-      },
-      matchContext: {
-        overs: matchContext.overs,
-        balls: matchContext.balls,
-        score: matchContext.score,
-        wickets: matchContext.wickets,
-        target: matchContext.target ?? null,
-        pitch,
-        weather,
-        format: _format,
-        isDeathOver: matchContext.isDeathOver || false,
-        isPowerplay: matchContext.isPowerplay || false,
-      }
-    });
-    
-    return { ...outcomeResult, animationSequence };
+    return outcomeResult;
   }
 
   // ─── No Ball Check ─────────────────────────────────────────────────────────
@@ -422,32 +396,7 @@ export const calculateBallOutcome = (
     isFreeHit: matchContext.isFreeHit || false,
   };
 
-  const animationSequence = generateAnimationSequence({
-    batAction: { shotType: shotType as ShotType, power },
-    bowlAction: { bowlType: bowlType as BowlType, line: line as Line, length: length as Length },
-    outcome: {
-      runs: outcomeResult.runs,
-      wicket: outcomeResult.wicket,
-      dismissalType: outcomeResult.dismissalType,
-      special: outcomeResult.special,
-      isNoBall: outcomeResult.isNoBall || false,
-      isWide: outcomeResult.isWide || false,
-    },
-    matchContext: {
-      overs: matchContext.overs,
-      balls: matchContext.balls,
-      score: matchContext.score,
-      wickets: matchContext.wickets,
-      target: matchContext.target ?? null,
-      pitch,
-      weather,
-      format: _format,
-      isDeathOver: matchContext.isDeathOver || false,
-      isPowerplay: matchContext.isPowerplay || false,
-    }
-  });
-
-  return { ...outcomeResult, animationSequence };
+  return outcomeResult;
 };
 
 // ─── Dismissal Type Logic ────────────────────────────────────────────────────

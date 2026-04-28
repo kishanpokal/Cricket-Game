@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import type { MatchState } from '../../types/cricket';
 import { AudioManager } from '../../utils/audio';
 import { createConfettiParticles } from '../../utils/animations';
-import type { AnimationOutput } from '../../types/animationEngine';
 
 interface BallResultOverlayProps {
   matchState: MatchState;
@@ -17,10 +16,6 @@ export default function BallResultOverlay({ matchState }: BallResultOverlayProps
     emoji: string;
     bgClass: string;
   } | null>(null);
-  
-  // Animation Sequence State
-  const [currentPhase, setCurrentPhase] = useState<number>(-1);
-  const [animSequence, setAnimSequence] = useState<AnimationOutput | null>(null);
   
   const [lastBallCount, setLastBallCount] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -87,122 +82,32 @@ export default function BallResultOverlay({ matchState }: BallResultOverlayProps
     if (resultData) {
       setResult(resultData);
       
-      // If we have an animation sequence, play it!
-      if (lastBall.animationSequence) {
-        setAnimSequence(lastBall.animationSequence);
-        setCurrentPhase(0); // Start Phase 0
-        setShowResult(false);
-      } else {
-        // Fallback: Show result immediately
-        handleImmediateResult(lastBall, resultData, isBoundaryOrWicket);
+      // Play audio and show result immediately
+      const am = audioManager.current;
+      if (lastBall.commentary) am.speakCommentary(lastBall.commentary);
+      if (isBoundaryOrWicket) am.cheerCrowd();
+      
+      if (lastBall.special === 'SIX' || lastBall.special === 'FOUR') am.playBatHit(false);
+      else if (lastBall.special === 'WICKET') am.playWicket();
+      else am.playBatHit(true);
+
+      setShowResult(true);
+      
+      if (lastBall.special === 'SIX' && containerRef.current) {
+        setTimeout(() => {
+          if (containerRef.current) createConfettiParticles(containerRef.current, 12);
+        }, 200);
       }
+
+      const dismissTime = (lastBall.special === 'SIX' || lastBall.special === 'WICKET') ? 2000 : 1500;
+      setTimeout(() => {
+        setShowResult(false);
+      }, dismissTime);
     }
   }, [matchState.innings1?.ballLog?.length, matchState.innings2?.ballLog?.length]);
 
-  // Phase Player Effect
-  useEffect(() => {
-    if (currentPhase < 0 || !animSequence) return;
-    
-    const phase = animSequence.phases[currentPhase];
-    if (!phase) {
-      // Sequence ended
-      setCurrentPhase(-1);
-      return;
-    }
-
-    const am = audioManager.current;
-    
-    // Phase-specific actions
-    if (phase.id === 'bowler_runup') {
-       if (animSequence.commentary.preDelivery) {
-         am.speakCommentary(animSequence.commentary.preDelivery);
-       }
-    } else if (phase.id === 'ball_release') {
-       if (animSequence.audioDirectives.playBallWhizz) am.playBatHit(true); // approximate whizz
-    } else if (phase.id === 'bat_contact') {
-       if (animSequence.commentary.onContact) am.speakCommentary(animSequence.commentary.onContact);
-       if (animSequence.audioDirectives.playBatSound) am.playBatHit(false);
-       if (animSequence.audioDirectives.playStumpsSound) am.playWicket();
-    } else if (phase.id === 'result_reveal') {
-       if (animSequence.commentary.postResult) am.speakCommentary(animSequence.commentary.postResult);
-       if (animSequence.audioDirectives.playCrowdCheer) am.cheerCrowd();
-       
-       // Show the actual visual result pop-up after a slight delay
-       setTimeout(() => {
-         setShowResult(true);
-         if (result?.type === 'SIX' && containerRef.current) {
-           createConfettiParticles(containerRef.current, 12);
-         }
-       }, phase.resultOverlayDelay || 0);
-    }
-
-    // Schedule next phase
-    const timer = setTimeout(() => {
-      setCurrentPhase(prev => prev + 1);
-    }, phase.durationMs);
-
-    return () => clearTimeout(timer);
-  }, [currentPhase, animSequence, result]);
-
-  // Fallback behavior for immediate result
-  const handleImmediateResult = (lastBall: any, _resultData: any, isBoundaryOrWicket: boolean) => {
-    const am = audioManager.current;
-    if (lastBall.commentary) am.speakCommentary(lastBall.commentary);
-    if (isBoundaryOrWicket) am.cheerCrowd();
-    
-    if (lastBall.special === 'SIX' || lastBall.special === 'FOUR') am.playBatHit(false);
-    else if (lastBall.special === 'WICKET') am.playWicket();
-    else am.playBatHit(true);
-
-    setShowResult(true);
-    
-    if (lastBall.special === 'SIX' && containerRef.current) {
-      setTimeout(() => {
-        if (containerRef.current) createConfettiParticles(containerRef.current, 12);
-      }, 200);
-    }
-
-    const dismissTime = (lastBall.special === 'SIX' || lastBall.special === 'WICKET') ? 1800 : 1300;
-    setTimeout(() => {
-      setShowResult(false);
-    }, dismissTime);
-  };
-
-  // Hide result after a while if generated via animation sequence
-  useEffect(() => {
-    if (showResult && currentPhase >= (animSequence?.phases.length || 0)) {
-       const timer = setTimeout(() => {
-         setShowResult(false);
-         setAnimSequence(null);
-       }, 2000);
-       return () => clearTimeout(timer);
-    }
-  }, [showResult, currentPhase, animSequence]);
-
-  const activePhase = animSequence && currentPhase >= 0 && currentPhase < animSequence.phases.length 
-    ? animSequence.phases[currentPhase] 
-    : null;
-
   return (
     <>
-      {/* Broadcast UI overlay for ambient text & camera angle */}
-      {activePhase && (
-        <div className="absolute inset-x-0 bottom-10 z-50 flex flex-col items-center pointer-events-none px-4">
-          <div 
-            className="bg-black/80 backdrop-blur-md border-t-2 border-[var(--color-six)] px-6 py-3 rounded-t-xl shadow-2xl flex flex-col items-center min-w-[280px]"
-            style={{ animation: 'slideUp 0.3s ease-out' }}
-          >
-            <div className="text-[var(--color-six)] text-xs font-bold uppercase tracking-[0.2em] mb-1 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              LIVE <span className="opacity-50">| {activePhase.cameraAngle.replace('_', ' ')}</span>
-            </div>
-            <div className="text-white text-lg font-medium text-center">
-              {activePhase.ambientText}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Result Pop-up */}
       {showResult && result && (
         <div

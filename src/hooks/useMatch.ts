@@ -48,11 +48,8 @@ export const useMatch = (matchId: string | null) => {
       console.log('[useMatch] New ball detected in state, resetting for next delivery');
       prevBallLogLenRef.current = currentLen;
       
-      const lastBallLog = matchState.innings2?.ballLog || matchState.innings1?.ballLog;
-      const lastBall = lastBallLog?.[lastBallLog.length - 1];
-      
-      // Delay reset if there is an animation sequence
-      const delayMs = lastBall?.animationSequence ? 7000 : 2500;
+      // Simple delay: just enough for the result overlay to show (1.5-2s)
+      const delayMs = 2000;
       
       setTimeout(() => {
         myActionRef.current = null;
@@ -390,24 +387,13 @@ export const useMatch = (matchId: string | null) => {
 
       if (!actions) {
         // Actions cleared — new ball starting
-        const wasWaiting = myActionRef.current !== null || processingRef.current;
-        
         myActionRef.current = null;
         setMyAction(null);
         setOpponentAction(null);
         processingRef.current = false;
         submitLockRef.current = false;
-        
-        if (wasWaiting) {
-          // Delay UI reset to allow result overlay animations to finish
-          setTimeout(() => {
-            setBallReady(true);
-            setBallPhase('idle');
-          }, 3500);
-        } else {
-          setBallReady(true);
-          setBallPhase('idle');
-        }
+        setBallReady(true);
+        setBallPhase('idle');
         return;
       }
 

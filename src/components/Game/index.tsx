@@ -20,6 +20,11 @@ export default function Game() {
   const [opponentOnline, setOpponentOnline] = useState(true);
   const statsUpdatedRef = useRef(false);
 
+  // Over change tracking
+  const [overChangeTimer, setOverChangeTimer] = useState(0);
+  const [showOverChange, setShowOverChange] = useState(false);
+  const prevOversRef = useRef<number | null>(null);
+
   // Update stats when match finishes
   useEffect(() => {
     if (matchState?.status === 'finished' && user && !statsUpdatedRef.current) {
@@ -83,6 +88,42 @@ export default function Game() {
     localStorage.removeItem('activeMatchId');
     navigate('/');
   };
+
+  // ── Derived state that needs to be computed before early returns ──
+  const isInnings2Derived = !!matchState?.innings2;
+  const inningsKeyDerived = isInnings2Derived ? 'innings2' : 'innings1';
+  const currentInningsDerived = matchState ? matchState[inningsKeyDerived] : undefined;
+  const totalOvers = currentInningsDerived?.overs ?? 0;
+
+  // Get the last ball's bowlType to show during over change
+  const lastBallBowlType = currentInningsDerived?.ballLog?.length
+    ? currentInningsDerived.ballLog[currentInningsDerived.ballLog.length - 1]?.bowlType
+    : null;
+
+  // Detect over changes and show 10-second over break timer
+  useEffect(() => {
+    if (prevOversRef.current === null) {
+      prevOversRef.current = totalOvers;
+      return;
+    }
+    if (totalOvers > prevOversRef.current && totalOvers > 0) {
+      setShowOverChange(true);
+      setOverChangeTimer(10);
+      const interval = setInterval(() => {
+        setOverChangeTimer(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            setShowOverChange(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      prevOversRef.current = totalOvers;
+      return () => clearInterval(interval);
+    }
+    prevOversRef.current = totalOvers;
+  }, [totalOvers]);
 
   if (!matchState || !user) {
     return (
@@ -291,6 +332,36 @@ export default function Game() {
           {/* Ball result overlay */}
           <BallResultOverlay matchState={matchState} />
 
+          {/* Over change overlay */}
+          {showOverChange && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: 'var(--z-overlay)' as string }}>
+              <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 sm:p-8 text-center shadow-2xl max-w-sm w-full mx-4" style={{ animation: 'scale-in 0.3s ease-out' }}>
+                <div className="text-4xl mb-3" aria-hidden="true">🏏</div>
+                <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-wider mb-1">Over Complete</h2>
+                <p className="text-gray-400 text-sm mb-4">Over {totalOvers} finished</p>
+                {lastBallBowlType && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Last Over Bowled</p>
+                    <p className="text-lg font-bold text-red-400 flex items-center justify-center gap-2">
+                      <span>{lastBallBowlType === 'Pace' ? '🔥' : lastBallBowlType === 'Spin' ? '🌀' : '💨'}</span>
+                      {lastBallBowlType}
+                    </p>
+                  </div>
+                )}
+                <div className="relative w-16 h-16 mx-auto mb-2">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 48 48">
+                    <circle cx="24" cy="24" r="22" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
+                    <circle cx="24" cy="24" r="22" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeDasharray={2 * Math.PI * 22} strokeDashoffset={2 * Math.PI * 22 * (1 - overChangeTimer / 10)} />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center font-mono text-xl font-black text-green-400">
+                    {overChangeTimer}
+                  </div>
+                </div>
+                <p className="text-[10px] text-gray-500">New over starting...</p>
+              </div>
+            </div>
+          )}
+
           {/* Opponent disconnected warning */}
           {!opponentOnline && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/40" style={{ zIndex: 'var(--z-overlay)' as string }}>
@@ -308,7 +379,7 @@ export default function Game() {
             {amIBatting ? (
               <BattingUI onSubmit={submitAction} ballReady={ballReady} />
             ) : (
-              <BowlingUI onSubmit={submitAction} ballReady={ballReady} bouncersBowledInOver={bouncersBowledInOver} />
+              <BowlingUI onSubmit={submitAction} ballReady={ballReady} bouncersBowledInOver={bouncersBowledInOver} currentBallInOver={currentBallsInOver} />
             )}
           </div>
 
@@ -331,7 +402,7 @@ export default function Game() {
             {amIBatting ? (
               <BattingUI onSubmit={submitAction} ballReady={ballReady} />
             ) : (
-              <BowlingUI onSubmit={submitAction} ballReady={ballReady} bouncersBowledInOver={bouncersBowledInOver} />
+              <BowlingUI onSubmit={submitAction} ballReady={ballReady} bouncersBowledInOver={bouncersBowledInOver} currentBallInOver={currentBallsInOver} />
             )}
           </div>
 

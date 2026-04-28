@@ -8,6 +8,8 @@ interface BowlingUIProps {
   onSubmit: (action: BallAction) => void;
   ballReady: boolean;
   bouncersBowledInOver: number;
+  /** Current ball number in the over (0-5). When 0, it's a new over — ask for bowl type */
+  currentBallInOver: number;
 }
 
 /** Pitch zone maps Line + Length simultaneously */
@@ -44,8 +46,9 @@ const BOUNCER_ZONE: PitchZone = {
   line: 'Middle', length: 'Bouncer', label: 'Bouncer', x: 15, y: -15, w: 70, h: 15,
 };
 
-export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOver }: BowlingUIProps) {
+export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOver, currentBallInOver }: BowlingUIProps) {
   const [bowlType, setBowlType] = useState<BowlType>('Pace');
+  const [bowlTypeLockedForOver, setBowlTypeLockedForOver] = useState(false);
   const [selectedZone, setSelectedZone] = useState<PitchZone | null>(null);
   const [timer, setTimer] = useState(15);
   const [timeLeft, setTimeLeft] = useState(15);
@@ -57,20 +60,26 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
 
   const bouncerDisabled = bouncersBowledInOver >= 2;
 
-  // Reset on new ball
+  // Reset on new ball — but bowl type stays locked for the over
   useEffect(() => {
     if (ballReady) {
       setSubmitted(false);
-      setBowlType('Pace');
       setSelectedZone(null);
       setTimer(15);
       setTimeLeft(15);
+      
+      // If it's the first ball of a new over, unlock bowl type so user can pick
+      if (currentBallInOver === 0) {
+        setBowlTypeLockedForOver(false);
+      }
     }
-  }, [ballReady]);
+  }, [ballReady, currentBallInOver]);
 
   // Timer countdown with requestAnimationFrame
   useEffect(() => {
     if (submitted) return;
+    // Don't start timer if bowl type not locked yet (user needs to pick first)
+    if (!bowlTypeLockedForOver) return;
 
     const startTime = Date.now();
     let animationFrameId: number;
@@ -96,7 +105,7 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
 
     animationFrameId = requestAnimationFrame(updateTimer);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [submitted]);
+  }, [submitted, bowlTypeLockedForOver]);
 
   const handleFinalSubmit = useCallback((bt: BowlType, ln: Line, len: Length) => {
     if (submitted) return;
@@ -112,16 +121,13 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
   const handleAutoSubmit = useCallback(() => {
     // Auto-submit with random defaults if timer runs out and no zone selected
     let finalZone = selectedZone;
-    let finalBowlType = bowlType;
+    const finalBowlType = bowlType;
     
     if (!finalZone) {
       const validZones = bouncerDisabled 
         ? PITCH_ZONES.filter(z => z.label !== 'Bouncer') 
         : [...PITCH_ZONES, BOUNCER_ZONE];
       finalZone = validZones[Math.floor(Math.random() * validZones.length)];
-      
-      const types: BowlType[] = ['Pace', 'Spin', 'Swing'];
-      finalBowlType = types[Math.floor(Math.random() * types.length)];
     }
     
     handleFinalSubmit(finalBowlType, finalZone.line, finalZone.length);
@@ -140,6 +146,50 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
       handleFinalSubmit(bowlType, selectedZone.line, selectedZone.length);
     }
   }, [selectedZone, bowlType, handleFinalSubmit]);
+
+  const handleBowlTypeSelect = useCallback((type: BowlType) => {
+    setBowlType(type);
+    setBowlTypeLockedForOver(true);
+  }, []);
+
+  // ── Bowl Type Selection Screen (shown at start of each over) ──
+  if (!bowlTypeLockedForOver && !submitted) {
+    return (
+      <div
+        className="w-full bg-gradient-to-br from-gray-900/95 to-gray-800/95 p-4 sm:p-6 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.15)] border border-red-500/20 backdrop-blur-xl"
+        role="group"
+        aria-label="Select bowling type for this over"
+      >
+        <div className="text-center mb-4">
+          <div className="bg-red-600/20 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 border border-red-500/30">
+            <span className="text-2xl" aria-hidden="true">🎯</span>
+          </div>
+          <h3 className="text-sm sm:text-base font-black text-white tracking-wide uppercase">New Over</h3>
+          <p className="text-[9px] sm:text-xs text-red-400/80 font-bold tracking-wider mt-1">
+            SELECT BOWLING TYPE FOR THIS OVER
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          {(['Pace', 'Spin', 'Swing'] as BowlType[]).map(t => (
+            <button
+              key={t}
+              onClick={() => handleBowlTypeSelect(t)}
+              className="w-full py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base uppercase tracking-widest transition-all duration-200 cursor-pointer bg-gray-800/80 text-gray-300 border border-gray-700 hover:bg-gradient-to-br hover:from-red-500 hover:to-red-700 hover:text-white hover:shadow-[0_4px_20px_rgba(239,68,68,0.4)] hover:border-red-400/50 flex items-center justify-center gap-3"
+            >
+              <span className="text-xl">{t === 'Pace' ? '🔥' : t === 'Spin' ? '🌀' : '💨'}</span>
+              <span>{t}</span>
+              <span className="text-[10px] sm:text-xs opacity-60 ml-1">{getBowlingSpeed(t)}</span>
+            </button>
+          ))}
+        </div>
+
+        <p className="text-[9px] text-gray-500 text-center mt-3">
+          This bowling type will be used for the entire over
+        </p>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
@@ -204,24 +254,11 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
         </div>
       </div>
 
-      {/* Bowl type selector */}
-      <div className="flex gap-1 mb-2 sm:mb-3" role="radiogroup" aria-label="Bowl type">
-        {(['Pace', 'Spin', 'Swing'] as BowlType[]).map(t => (
-          <button
-            key={t}
-            onClick={() => setBowlType(t)}
-            role="radio"
-            aria-checked={bowlType === t}
-            className={`flex-1 py-1.5 sm:py-2.5 rounded-lg font-bold text-[9px] sm:text-xs uppercase tracking-widest transition-all duration-200 cursor-pointer ${
-              bowlType === t
-                ? 'bg-gradient-to-br from-red-500 to-red-700 text-white shadow-[0_4px_15px_rgba(239,68,68,0.4)] border border-red-400/50'
-                : 'bg-gray-800/80 text-gray-400 border border-gray-700 hover:bg-gray-700 hover:text-white'
-            }`}
-          >
-            {t === 'Pace' ? '🔥' : t === 'Spin' ? '🌀' : '💨'} {t}
-            <div className="text-[6px] sm:text-[8px] mt-0.5 opacity-60">{getBowlingSpeed(t)}</div>
-          </button>
-        ))}
+      {/* Bowl type indicator (locked for this over) */}
+      <div className="flex items-center justify-center gap-2 mb-2 sm:mb-3 py-1.5 bg-red-500/10 rounded-lg border border-red-500/20">
+        <span className="text-sm">{bowlType === 'Pace' ? '🔥' : bowlType === 'Spin' ? '🌀' : '💨'}</span>
+        <span className="text-xs sm:text-sm font-bold text-red-400 uppercase tracking-wider">{bowlType} Over</span>
+        <span className="text-[8px] text-gray-500">(locked)</span>
       </div>
 
       {/* Pitch map SVG */}
