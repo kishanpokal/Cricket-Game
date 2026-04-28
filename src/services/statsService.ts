@@ -1,6 +1,38 @@
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import type { MatchState } from '../types/cricket';
+
+const GUEST_TTL_MS = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
+
+/**
+ * Deletes guest user profiles from Firestore that haven't been active in 3+ days.
+ * Runs once per session (called from Lobby mount).
+ */
+export const cleanupInactiveGuests = async () => {
+  try {
+    const cutoffTime = Date.now() - GUEST_TTL_MS;
+    const guestsQuery = query(
+      collection(db, 'users'),
+      where('isGuest', '==', true),
+      where('lastActive', '<', cutoffTime)
+    );
+
+    const snapshot = await getDocs(guestsQuery);
+    if (snapshot.empty) return 0;
+
+    const deletions: Promise<void>[] = [];
+    snapshot.forEach((docSnap) => {
+      deletions.push(deleteDoc(doc(db, 'users', docSnap.id)));
+    });
+
+    await Promise.all(deletions);
+    console.log(`[Cleanup] Deleted ${deletions.length} inactive guest account(s) (3+ days inactive).`);
+    return deletions.length;
+  } catch (err) {
+    console.error('[Cleanup] Failed to cleanup inactive guests:', err);
+    return 0;
+  }
+};
 
 /**
  * Updates both players' stats in Firestore when a match ends.

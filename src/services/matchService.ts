@@ -1,10 +1,11 @@
-import { ref, set, onValue, update, remove, get, onDisconnect } from 'firebase/database';
+import { ref, set, onValue, update, remove, get, onDisconnect, query, orderByChild, endAt } from 'firebase/database';
 import { rtdb } from './firebase';
 import type { MatchState, UserProfile, TossDecision, TossCall, PitchType, Weather, MatchFormat } from '../types/cricket';
 
 // ─── Retry Logic ────────────────────────────────────────────────────────────
 
 const MAX_RETRIES = 3;
+const MATCH_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 async function withRetry<T>(
   operation: () => Promise<T>,
@@ -25,6 +26,35 @@ async function withRetry<T>(
   }
   throw lastError;
 }
+
+// ─── Auto-Cleanup: Delete matches older than 24 hours ───────────────────────
+
+/**
+ * Scans all matches in RTDB and deletes any that are older than 24 hours.
+ * This runs once per session to prevent unbounded data growth.
+ */
+export const cleanupOldMatches = async () => {
+  try {
+    const cutoffTime = Date.now() - MATCH_TTL_MS;
+    const matchesRef = ref(rtdb, 'matches');
+    const oldMatchesQuery = query(matchesRef, orderByChild('createdAt'), endAt(cutoffTime));
+    const snapshot = await get(oldMatchesQuery);
+
+    if (!snapshot.exists()) return 0;
+
+    const deletions: Promise<void>[] = [];
+    snapshot.forEach((child) => {
+      deletions.push(remove(ref(rtdb, `matches/${child.key}`)));
+    });
+
+    await Promise.all(deletions);
+    console.log(`[Cleanup] Deleted ${deletions.length} expired match(es) older than 24 hours.`);
+    return deletions.length;
+  } catch (err) {
+    console.error('[Cleanup] Failed to cleanup old matches:', err);
+    return 0;
+  }
+};
 
 // ─── Match CRUD ─────────────────────────────────────────────────────────────
 
@@ -47,6 +77,7 @@ export const createMatch = async (
     weather,
     player1: { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, role: 'bat' },
     lastUpdated: Date.now(),
+    createdAt: Date.now(),
   };
 
   await withRetry(() => set(ref(rtdb, `matches/${matchId}`), initialState));

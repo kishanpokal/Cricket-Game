@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/useGameStore';
-import { createMatch, joinMatch, checkForActiveMatch } from '../../services/matchService';
+import { createMatch, joinMatch, checkForActiveMatch, cleanupOldMatches } from '../../services/matchService';
+import { cleanupInactiveGuests } from '../../services/statsService';
 import type { MatchFormat, PitchType, Weather } from '../../types/cricket';
 import { Swords, Trophy, User, Wifi, WifiOff, ArrowRight, CheckCircle } from 'lucide-react';
 
@@ -26,6 +27,12 @@ export default function Lobby() {
   const [error, setError] = useState('');
   const [reconnectMatchId, setReconnectMatchId] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Auto-cleanup expired matches + inactive guest accounts (runs once on mount)
+  useEffect(() => {
+    cleanupOldMatches().catch(console.error);
+    cleanupInactiveGuests().catch(console.error);
+  }, []);
 
   // Check for active match to reconnect to
   useEffect(() => {

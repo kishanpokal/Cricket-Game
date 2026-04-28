@@ -5,6 +5,10 @@ export type UserProfile = {
   displayName: string;
   photoURL: string;
   email: string;
+  /** Whether this is an anonymous/guest account */
+  isGuest?: boolean;
+  /** Unix timestamp of last login/activity (for inactive guest cleanup) */
+  lastActive?: number;
   stats: {
     matches: number;
     wins: number;
@@ -151,6 +155,8 @@ export type MatchState = {
   isSuperOver?: boolean;
   currentTurn?: string;
   lastUpdated: number;
+  /** Unix timestamp when the match was created (for auto-cleanup) */
+  createdAt?: number;
   abandonedBy?: string;
   winner?: string;
   /** List of spectator UIDs (future feature) */

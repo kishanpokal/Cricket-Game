@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users collection: anyone logged in can read (for leaderboard),
+    // but only the owner can write their own document.
+    // Any authenticated user can delete a guest profile (for cleanup of inactive guests).
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && (
+        request.auth.uid == userId ||
+        resource.data.isGuest == true
+      );
+    }
+  }
+}

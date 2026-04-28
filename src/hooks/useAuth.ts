@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signInWithPopup, signInAnonymously } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../services/firebase';
 import { useGameStore } from '../store/useGameStore';
 import type {  UserProfile  } from '../types/cricket';
@@ -25,10 +25,14 @@ export const useAuth = () => {
         // Fetch or create profile
         const userRef = doc(db, 'users', firebaseUser.uid);
         const userSnap = await getDoc(userRef);
+        const isAnonymous = firebaseUser.isAnonymous;
         
         let profile: UserProfile;
         if (userSnap.exists()) {
           profile = userSnap.data() as UserProfile;
+          // Update lastActive timestamp on every login
+          await updateDoc(userRef, { lastActive: Date.now() }).catch(console.error);
+          profile.lastActive = Date.now();
         } else {
           const defaultName = generateRandomName();
           profile = {
@@ -36,6 +40,8 @@ export const useAuth = () => {
             displayName: firebaseUser.displayName || defaultName,
             photoURL: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${defaultName}`,
             email: firebaseUser.email || '',
+            isGuest: isAnonymous,
+            lastActive: Date.now(),
             stats: {
               matches: 0,
               wins: 0,
