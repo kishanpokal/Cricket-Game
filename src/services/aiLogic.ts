@@ -10,8 +10,10 @@ import type {
   Line,
   Length,
 } from '../types/cricket';
+import { generateAnimationSequence } from './animationEngine';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+
 
 /** Returns the max wickets allowed before "all out" based on overs. */
 export const getMaxWickets = (overs: number): number => {
@@ -246,7 +248,7 @@ export const calculateBallOutcome = (
   }
 
   if (isWide) {
-    return {
+    const outcomeResult: BallOutcome = {
       runs: 1,
       wicket: false,
       dismissalType: null,
@@ -257,6 +259,33 @@ export const calculateBallOutcome = (
       isNoBall: false,
       isFreeHit: false,
     };
+    
+    const animationSequence = generateAnimationSequence({
+      batAction: { shotType: shotType as ShotType, power },
+      bowlAction: { bowlType: bowlType as BowlType, line: line as Line, length: length as Length },
+      outcome: {
+        runs: outcomeResult.runs,
+        wicket: outcomeResult.wicket,
+        dismissalType: outcomeResult.dismissalType,
+        special: outcomeResult.special,
+        isNoBall: outcomeResult.isNoBall || false,
+        isWide: outcomeResult.isWide || false,
+      },
+      matchContext: {
+        overs: matchContext.overs,
+        balls: matchContext.balls,
+        score: matchContext.score,
+        wickets: matchContext.wickets,
+        target: matchContext.target ?? null,
+        pitch,
+        weather,
+        format: _format,
+        isDeathOver: matchContext.isDeathOver || false,
+        isPowerplay: matchContext.isPowerplay || false,
+      }
+    });
+    
+    return { ...outcomeResult, animationSequence };
   }
 
   // ─── No Ball Check ─────────────────────────────────────────────────────────
@@ -381,7 +410,7 @@ export const calculateBallOutcome = (
     commentary = fhPrefix + commentary;
   }
 
-  return {
+  const outcomeResult: BallOutcome = {
     runs,
     wicket: isWicket,
     dismissalType,
@@ -392,6 +421,33 @@ export const calculateBallOutcome = (
     isWide: false,
     isFreeHit: matchContext.isFreeHit || false,
   };
+
+  const animationSequence = generateAnimationSequence({
+    batAction: { shotType: shotType as ShotType, power },
+    bowlAction: { bowlType: bowlType as BowlType, line: line as Line, length: length as Length },
+    outcome: {
+      runs: outcomeResult.runs,
+      wicket: outcomeResult.wicket,
+      dismissalType: outcomeResult.dismissalType,
+      special: outcomeResult.special,
+      isNoBall: outcomeResult.isNoBall || false,
+      isWide: outcomeResult.isWide || false,
+    },
+    matchContext: {
+      overs: matchContext.overs,
+      balls: matchContext.balls,
+      score: matchContext.score,
+      wickets: matchContext.wickets,
+      target: matchContext.target ?? null,
+      pitch,
+      weather,
+      format: _format,
+      isDeathOver: matchContext.isDeathOver || false,
+      isPowerplay: matchContext.isPowerplay || false,
+    }
+  });
+
+  return { ...outcomeResult, animationSequence };
 };
 
 // ─── Dismissal Type Logic ────────────────────────────────────────────────────

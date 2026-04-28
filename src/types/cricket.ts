@@ -83,6 +83,7 @@ export type BallOutcome = {
   isNoBall?: boolean;
   isWide?: boolean;
   isFreeHit?: boolean;
+  animationSequence?: import('./animationEngine').AnimationOutput;
 };
 
 /** Partnership tracking for innings */

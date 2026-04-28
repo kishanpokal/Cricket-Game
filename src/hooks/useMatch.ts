@@ -47,13 +47,22 @@ export const useMatch = (matchId: string | null) => {
       // A new ball was added — reset for next delivery
       console.log('[useMatch] New ball detected in state, resetting for next delivery');
       prevBallLogLenRef.current = currentLen;
-      myActionRef.current = null;
-      setMyAction(null);
-      setOpponentAction(null);
-      setBallReady(true);
-      setBallPhase('idle');
-      processingRef.current = false;
-      submitLockRef.current = false;
+      
+      const lastBallLog = matchState.innings2?.ballLog || matchState.innings1?.ballLog;
+      const lastBall = lastBallLog?.[lastBallLog.length - 1];
+      
+      // Delay reset if there is an animation sequence
+      const delayMs = lastBall?.animationSequence ? 7000 : 2500;
+      
+      setTimeout(() => {
+        myActionRef.current = null;
+        setMyAction(null);
+        setOpponentAction(null);
+        setBallReady(true);
+        setBallPhase('idle');
+        processingRef.current = false;
+        submitLockRef.current = false;
+      }, delayMs);
     } else if (currentLen < prevBallLogLenRef.current) {
       // Innings reset (e.g., super over) — sync the counter
       prevBallLogLenRef.current = currentLen;
@@ -430,7 +439,7 @@ export const useMatch = (matchId: string | null) => {
           update(ref(rtdb, `matches/${matchId}/actions`), JSON.parse(JSON.stringify({
             [missingKey]: defaultAction,
           }))).catch(console.error);
-        }, 30000);
+        }, 16000);
       }
 
       // ─── If both submitted, the LAST player to submit processes the ball ──────

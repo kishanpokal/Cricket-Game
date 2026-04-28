@@ -48,6 +48,7 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
   const [bowlType, setBowlType] = useState<BowlType>('Pace');
   const [selectedZone, setSelectedZone] = useState<PitchZone | null>(null);
   const [timer, setTimer] = useState(15);
+  const [timeLeft, setTimeLeft] = useState(15);
   const [submitted, setSubmitted] = useState(false);
   const lastTimerWarning = useRef(0);
 
@@ -63,28 +64,39 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
       setBowlType('Pace');
       setSelectedZone(null);
       setTimer(15);
+      setTimeLeft(15);
     }
   }, [ballReady]);
 
-  // Timer countdown
+  // Timer countdown with requestAnimationFrame
   useEffect(() => {
     if (submitted) return;
 
-    if (timer <= 0) {
-      handleAutoSubmit();
-      return;
-    }
+    const startTime = Date.now();
+    let animationFrameId: number;
 
-    if (timer <= 2 && timer !== lastTimerWarning.current) {
-      lastTimerWarning.current = timer;
-      AudioManager.getInstance().playTimerWarning();
-    }
+    const updateTimer = () => {
+      const elapsed = (Date.now() - startTime) / 1000;
+      const newTimeLeft = Math.max(0, 15 - elapsed);
+      setTimeLeft(newTimeLeft);
+      setTimer(Math.ceil(newTimeLeft));
 
-    const interval = setInterval(() => {
-      setTimer(prev => prev - 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [submitted, timer]);
+      const currentIntTimer = Math.ceil(newTimeLeft);
+      if (currentIntTimer <= 2 && currentIntTimer > 0 && currentIntTimer !== lastTimerWarning.current) {
+        lastTimerWarning.current = currentIntTimer;
+        AudioManager.getInstance().playTimerWarning();
+      }
+
+      if (newTimeLeft > 0) {
+        animationFrameId = requestAnimationFrame(updateTimer);
+      } else {
+        handleAutoSubmit();
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(updateTimer);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [submitted]);
 
   const handleFinalSubmit = useCallback((bt: BowlType, ln: Line, len: Length) => {
     if (submitted) return;
@@ -147,7 +159,7 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
   }
 
   // Timer
-  const timerProgress = timer / 15;
+  const timerProgress = timeLeft / 15;
   const circumference = 2 * Math.PI * 22;
   const strokeOffset = circumference * (1 - timerProgress);
 
@@ -183,7 +195,7 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={strokeOffset}
-              style={{ transition: 'stroke-dashoffset 1s linear' }}
+              style={{ transition: 'stroke 0.3s ease' }}
             />
           </svg>
           <div className={`absolute inset-0 flex items-center justify-center font-mono text-sm sm:text-base font-black ${timer <= 2 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
