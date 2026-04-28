@@ -163,6 +163,7 @@ export const submitTossDecision = async (matchId: string, decision: TossDecision
       status: 'batting',
       matchStartTime: Date.now(),
       lastUpdated: Date.now(),
+      totalBalls: 0,
     });
   });
 };

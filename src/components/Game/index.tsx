@@ -102,6 +102,12 @@ export default function Game() {
 
   // Detect over changes and show 10-second over break timer
   useEffect(() => {
+    if (matchState?.status !== 'batting') {
+      setShowOverChange(false);
+      setOverChangeTimer(0);
+      return;
+    }
+
     if (prevOversRef.current === null) {
       prevOversRef.current = totalOvers;
       return;
@@ -123,7 +129,7 @@ export default function Game() {
       return () => clearInterval(interval);
     }
     prevOversRef.current = totalOvers;
-  }, [totalOvers]);
+  }, [totalOvers, matchState?.status]);
 
   if (!matchState || !user) {
     return (

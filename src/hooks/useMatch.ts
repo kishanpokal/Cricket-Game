@@ -36,18 +36,53 @@ export const useMatch = (matchId: string | null) => {
   useEffect(() => { matchStateRef.current = matchState; }, [matchState]);
   useEffect(() => { userRef.current = user; }, [user]);
 
-  // Track ball log length for counter sync only (no reset — reset is handled by actions listener)
-  const prevBallLogLenRef = useRef(0);
+  // ─── Bulletproof UI Reset via totalBalls ───────────────────────────
+  // Using totalBalls guarantees we reset the UI even if the client misses
+  // the intermediate `actions: null` state due to network batching/disconnects.
+  const prevTotalBallsRef = useRef(-1);
   useEffect(() => {
     if (!matchState) return;
-    const i1Len = matchState.innings1?.ballLog?.length ?? 0;
-    const i2Len = matchState.innings2?.ballLog?.length ?? 0;
-    const currentLen = i1Len + i2Len;
+    const currentTotalBalls = matchState.totalBalls ?? 0;
 
-    if (currentLen !== prevBallLogLenRef.current) {
-      prevBallLogLenRef.current = currentLen;
+    // Initialize on first load without triggering reset
+    if (prevTotalBallsRef.current === -1) {
+      prevTotalBallsRef.current = currentTotalBalls;
+      return;
     }
-  }, [matchState?.innings1?.ballLog?.length, matchState?.innings2?.ballLog?.length]);
+
+    if (currentTotalBalls > prevTotalBallsRef.current) {
+      prevTotalBallsRef.current = currentTotalBalls;
+      
+      // Cancel any pending reset to prevent stacking
+      if (resetTimeoutRef.current) {
+        clearTimeout(resetTimeoutRef.current);
+      }
+
+      const isBattingPhase = matchState.status === 'batting';
+      
+      if (isBattingPhase) {
+        // Delay reset by 1.5s to allow BallResultOverlay to show
+        resetTimeoutRef.current = setTimeout(() => {
+          myActionRef.current = null;
+          setMyAction(null);
+          processingRef.current = false;
+          submitLockRef.current = false;
+          setBallReady(true);
+          setBallPhase('idle');
+          resetTimeoutRef.current = null;
+          console.log('[useMatch] UI Reset triggered by totalBalls increment');
+        }, 1500);
+      } else {
+        // Immediate reset during breaks
+        myActionRef.current = null;
+        setMyAction(null);
+        processingRef.current = false;
+        submitLockRef.current = false;
+        setBallReady(true);
+        setBallPhase('idle');
+      }
+    }
+  }, [matchState?.totalBalls, matchState?.status, setMyAction]);
 
   // Subscribe to match state
   useEffect(() => {
@@ -402,6 +437,17 @@ export const useMatch = (matchId: string | null) => {
     }
   });
 
+  // Reset ballReady when transitioning to active/batting
+  useEffect(() => {
+    if (matchState?.status === 'batting') {
+      setBallReady(true);
+      setMyAction(null);
+      myActionRef.current = null;
+      setOpponentAction(null);
+      setBallPhase('idle');
+    }
+  }, [matchState?.status]);
+
   // Listen for actions — SINGLE listener
   useEffect(() => {
     if (!matchId || !user) return;
@@ -430,48 +476,14 @@ export const useMatch = (matchId: string | null) => {
       const isPlayer1 = currentMatchState.player1.uid === user.uid;
 
       if (!actions) {
-        // Actions cleared — ball was just processed.
-        // Cancel any pending reset first (prevent stacking)
-        if (resetTimeoutRef.current) {
-          clearTimeout(resetTimeoutRef.current);
-          resetTimeoutRef.current = null;
-        }
-
-        // Only delay-reset during active batting (not during breaks)
-        if (isBattingPhase) {
-          // Delay reset by 1.5s to let the BallResultOverlay show
-          resetTimeoutRef.current = setTimeout(() => {
-            myActionRef.current = null;
-            setMyAction(null);
-            setOpponentAction(null);
-            processingRef.current = false;
-            submitLockRef.current = false;
-            setBallReady(true);
-            setBallPhase('idle');
-            resetTimeoutRef.current = null;
-            console.log('[useMatch] Reset complete — ready for next ball');
-          }, 1500);
-        } else {
-          // During innings break / finished, just clear state immediately
-          myActionRef.current = null;
-          setMyAction(null);
-          setOpponentAction(null);
-          processingRef.current = false;
-          submitLockRef.current = false;
-          setBallReady(true);
-          setBallPhase('idle');
-        }
+        // Actions cleared — opponent action is now definitely null.
+        // UI reset for myAction and ballReady is handled by totalBalls listener.
+        setOpponentAction(null);
         return;
       }
 
       // Don't process new actions during non-batting phases
       if (!isBattingPhase) return;
-
-      // If new actions arrive, cancel any pending reset (prevents stale reset from wiping new submissions)
-      if (resetTimeoutRef.current) {
-        clearTimeout(resetTimeoutRef.current);
-        resetTimeoutRef.current = null;
-      }
 
       // Update opponent action display
       const opKey = isPlayer1 ? 'p2' : 'p1';
@@ -527,6 +539,11 @@ export const useMatch = (matchId: string | null) => {
             .catch((err) => {
               console.error('[useMatch] processBall error:', err);
               processingRef.current = false;
+              // Reset local UI so they can try again if it fails
+              setBallReady(true);
+              myActionRef.current = null;
+              setMyAction(null);
+              setBallPhase('idle');
             });
         }
       }
