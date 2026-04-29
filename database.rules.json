@@ -1,10 +1,10 @@
 {
   "rules": {
     "matches": {
+      ".read": "auth != null",
+      ".write": "auth != null",
       ".indexOn": ["createdAt"],
       "$matchId": {
-        ".read": "auth != null",
-        ".write": "auth != null",
         "presence": {
           "$uid": {
             ".write": "auth != null && auth.uid === $uid"

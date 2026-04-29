@@ -1,5 +1,7 @@
 {
-  "projects": {},
+  "projects": {
+    "default": "cricket-buzz-18e1a"
+  },
   "targets": {},
   "etags": {}
 }
