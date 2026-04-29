@@ -225,6 +225,12 @@ export const useMatch = (matchId: string | null) => {
       // ─── Update innings state ──────────────────────────────────────────
       const updatedInnings: InningsState = { ...currentInnings };
 
+      // Sanitize potential NaN/undefined values from previous corrupted states
+      updatedInnings.score = Number(updatedInnings.score) || 0;
+      updatedInnings.wickets = Number(updatedInnings.wickets) || 0;
+      updatedInnings.balls = Number(updatedInnings.balls) || 0;
+      updatedInnings.overs = Number(updatedInnings.overs) || 0;
+
       // Score
       updatedInnings.score += outcome.runs;
       if (outcome.isNoBall) updatedInnings.score += 1;
@@ -252,6 +258,7 @@ export const useMatch = (matchId: string | null) => {
         if (updatedInnings.balls === 6) {
           updatedInnings.overs += 1;
           updatedInnings.balls = 0;
+          updatedInnings.currentBowlType = undefined;
 
           const rrByOver = [...(updatedInnings.runRateByOver ?? [])];
           rrByOver.push(calculateRunRate(updatedInnings.score, updatedInnings.overs, 0));
@@ -499,13 +506,17 @@ export const useMatch = (matchId: string | null) => {
       if ((hasP1 && !hasP2) || (!hasP1 && hasP2)) {
         watchdog = setTimeout(() => {
           const missingKey = hasP1 ? 'p2' : 'p1';
+          const isMissingPlayerBatting = currentMatchState.innings1?.battingTeam === (missingKey === 'p1' ? currentMatchState.player1.uid : currentMatchState.player2?.uid);
+          const actualIsMissingPlayerBatting = currentMatchState.status === 'batting' ? 
+            (currentMatchState.innings2 ? currentMatchState.innings2.battingTeam === (missingKey === 'p1' ? currentMatchState.player1.uid : currentMatchState.player2?.uid) : isMissingPlayerBatting) : false;
+
           // Randomize the auto-submit so outcomes aren't always 0 runs
           const shotTypes: ShotType[] = ['Defensive', 'Drive', 'Cut', 'Pull', 'Sweep', 'Slog', 'Loft'];
           const bowlTypes: BowlType[] = ['Pace', 'Spin', 'Swing'];
           const lines: Line[] = ['Off Stump', 'Middle', 'Leg', 'Outside Off'];
           const lengths: Length[] = ['Full', 'Good Length', 'Short', 'Yorker'];
           
-          const defaultAction: BallAction = hasP1
+          const defaultAction: BallAction = !actualIsMissingPlayerBatting
             ? { bowlType: bowlTypes[Math.floor(Math.random() * bowlTypes.length)], line: lines[Math.floor(Math.random() * lines.length)], length: lengths[Math.floor(Math.random() * lengths.length)] }
             : { shotType: shotTypes[Math.floor(Math.random() * shotTypes.length)], power: Math.floor(Math.random() * 61) + 40 };
 
@@ -530,9 +541,7 @@ export const useMatch = (matchId: string | null) => {
         if (shouldProcess) {
           processingRef.current = true;
           setBallPhase('processing');
-          console.log(`[useMatch] Both actions received. ${isPlayer1 ? 'P1' : 'P2'} processing ball...`);
-          console.log('[useMatch] P1 action:', actions.p1);
-          console.log('[useMatch] P2 action:', actions.p2);
+          console.log(`[useMatch] Both actions received. ${isPlayer1 ? 'P1' : 'P2'} designated to process ball...`);
 
           // Call processBall and handle errors
           processBallRef.current(currentMatchState, matchId, actions.p1, actions.p2)
@@ -545,6 +554,21 @@ export const useMatch = (matchId: string | null) => {
               setMyAction(null);
               setBallPhase('idle');
             });
+        } else {
+          // Fallback: If we are not the designated processor, but the ball hasn't been processed
+          // after 8 seconds (meaning the other player might be asleep/backgrounded/crashed), 
+          // we take over processing.
+          watchdog = setTimeout(() => {
+            if (!processingRef.current) {
+               console.warn(`[useMatch] Designated processor failed to respond. Taking over processing...`);
+               processingRef.current = true;
+               setBallPhase('processing');
+               processBallRef.current(currentMatchState, matchId, actions.p1, actions.p2).catch(err => {
+                 console.error('[useMatch] Fallback processBall error:', err);
+                 processingRef.current = false;
+               });
+            }
+          }, 8000);
         }
       }
     });
@@ -597,5 +621,43 @@ export const useMatch = (matchId: string | null) => {
     }
   }, [matchId, setMyAction]);
 
-  return { submitAction, ballReady, ballPhase };
+  const submitBowlType = useCallback(async (bowlType: BowlType) => {
+    if (!matchId || !matchStateRef.current) return;
+    const currentMatch = matchStateRef.current;
+    const isInnings1 = !currentMatch.innings2 && currentMatch.status !== 'finished';
+    const inningsKey = isInnings1 ? 'innings1' : 'innings2';
+    
+    try {
+      const currentInnings = currentMatch[inningsKey];
+      if (!currentInnings || typeof currentInnings.score !== 'number' || Number.isNaN(currentInnings.score)) {
+        const isP1Batting = isInnings1 ? currentMatch.player1.role === 'bat' : currentMatch.player1.role !== 'bat';
+        const battingTeamUid = isP1Batting
+          ? currentMatch.player1.uid
+          : (currentMatch.player2?.uid || '');
+
+        await update(ref(rtdb, `matches/${matchId}/${inningsKey}`), {
+          battingTeam: battingTeamUid,
+          score: 0,
+          wickets: 0,
+          overs: 0,
+          balls: 0,
+          ballLog: [],
+          runRateByOver: [],
+          boundaryCount: { fours: 0, sixes: 0 },
+          dotBallStreak: 0,
+          boundaryStreak: 0,
+          partnerships: [{ runs: 0, balls: 0 }],
+          currentBowlType: bowlType
+        });
+      } else {
+        await update(ref(rtdb, `matches/${matchId}/${inningsKey}`), {
+          currentBowlType: bowlType
+        });
+      }
+    } catch(err) {
+      console.error(err);
+    }
+  }, [matchId]);
+
+  return { submitAction, submitBowlType, ballReady, ballPhase };
 };

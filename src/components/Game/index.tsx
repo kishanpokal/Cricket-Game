@@ -16,7 +16,7 @@ export default function Game() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const { user, matchState } = useGameStore();
-  const { submitAction, ballReady } = useMatch(matchId || null);
+  const { submitAction, submitBowlType, ballReady } = useMatch(matchId || null);
   const [opponentOnline, setOpponentOnline] = useState(true);
   const statsUpdatedRef = useRef(false);
 
@@ -222,7 +222,7 @@ export default function Game() {
           />
 
           {/* Pitch strip */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-[200px] sm:w-48 sm:h-[300px] lg:w-56 lg:h-[360px] bg-[var(--color-soil)]/30 rounded-xl border-2 border-white/20 pointer-events-none">
+          <div className="absolute top-[35%] lg:top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-[200px] sm:w-48 sm:h-[300px] lg:w-56 lg:h-[360px] bg-[var(--color-soil)]/30 rounded-xl border-2 border-white/20 pointer-events-none">
             {/* Stump marks */}
             <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
               {[0, 1, 2].map(i => <div key={i} className="w-0.5 h-3 bg-white/40 rounded" />)}
@@ -339,7 +339,7 @@ export default function Game() {
           <BallResultOverlay matchState={matchState} />
 
           {/* Over change overlay */}
-          {showOverChange && (
+          {showOverChange && amIBatting && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: 'var(--z-overlay)' as string }}>
               <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 sm:p-8 text-center shadow-2xl max-w-sm w-full mx-4" style={{ animation: 'scale-in 0.3s ease-out' }}>
                 <div className="text-4xl mb-3" aria-hidden="true">🏏</div>
@@ -359,8 +359,15 @@ export default function Game() {
                   
                   <div className="flex-1 bg-blue-500/10 border border-blue-500/30 rounded-xl p-3">
                     <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Next Over Type</p>
-                    <p className="text-xs font-bold text-blue-400 flex items-center justify-center h-full">
-                      {amIBatting ? 'Waiting for opponent...' : 'Select below!'}
+                    <p className="text-sm sm:text-base font-bold text-blue-400 flex items-center justify-center h-full gap-1.5">
+                      {currentInnings?.currentBowlType ? (
+                        <>
+                          <span>{currentInnings.currentBowlType === 'Pace' ? '🔥' : currentInnings.currentBowlType === 'Spin' ? '🌀' : '💨'}</span>
+                          {currentInnings.currentBowlType}
+                        </>
+                      ) : (
+                        <span className="text-xs">Waiting for opponent...</span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -394,9 +401,9 @@ export default function Game() {
           {/* Controls at bottom of field — MOBILE ONLY */}
           <div className="lg:hidden w-full max-w-xl mx-auto px-2 sm:px-4 pb-2 sm:pb-4 mt-auto pt-1 relative" style={{ zIndex: 'var(--z-ui)' as string, maxHeight: '55vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
             {amIBatting ? (
-              <BattingUI onSubmit={submitAction} ballReady={ballReady} />
+              <BattingUI onSubmit={submitAction} ballReady={ballReady} currentBallInOver={currentBallsInOver} currentBowlType={currentInnings?.currentBowlType} />
             ) : (
-              <BowlingUI onSubmit={submitAction} ballReady={ballReady} bouncersBowledInOver={bouncersBowledInOver} currentBallInOver={currentBallsInOver} />
+              <BowlingUI onSubmit={submitAction} ballReady={ballReady} bouncersBowledInOver={bouncersBowledInOver} currentBallInOver={currentBallsInOver} currentBowlType={currentInnings?.currentBowlType} onSelectBowlType={submitBowlType} />
             )}
           </div>
 
@@ -417,9 +424,9 @@ export default function Game() {
               </h2>
             </div>
             {amIBatting ? (
-              <BattingUI onSubmit={submitAction} ballReady={ballReady} />
+              <BattingUI onSubmit={submitAction} ballReady={ballReady} currentBallInOver={currentBallsInOver} currentBowlType={currentInnings?.currentBowlType} />
             ) : (
-              <BowlingUI onSubmit={submitAction} ballReady={ballReady} bouncersBowledInOver={bouncersBowledInOver} currentBallInOver={currentBallsInOver} />
+              <BowlingUI onSubmit={submitAction} ballReady={ballReady} bouncersBowledInOver={bouncersBowledInOver} currentBallInOver={currentBallsInOver} currentBowlType={currentInnings?.currentBowlType} onSelectBowlType={submitBowlType} />
             )}
           </div>
 

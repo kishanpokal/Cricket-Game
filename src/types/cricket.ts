@@ -104,6 +104,7 @@ export type InningsState = {
   balls: number;
   ballLog: Array<BallOutcome & BallAction>;
   currentBall: BallAction;
+  currentBowlType?: BowlType;
   isFreeHitNextBall?: boolean;
   /** Run rate at end of each completed over */
   runRateByOver?: number[];

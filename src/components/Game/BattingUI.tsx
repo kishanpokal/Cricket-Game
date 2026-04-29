@@ -6,6 +6,8 @@ import { AudioManager } from '../../utils/audio';
 interface BattingUIProps {
   onSubmit: (action: BallAction) => void;
   ballReady: boolean;
+  currentBallInOver?: number;
+  currentBowlType?: string;
 }
 
 const SHOTS: { type: ShotType; icon: string; label: string }[] = [
@@ -18,7 +20,7 @@ const SHOTS: { type: ShotType; icon: string; label: string }[] = [
   { type: 'Loft', icon: '🚀', label: 'LFT' },
 ];
 
-export default memo(function BattingUI({ onSubmit, ballReady }: BattingUIProps) {
+export default memo(function BattingUI({ onSubmit, ballReady, currentBallInOver = 1, currentBowlType }: BattingUIProps) {
   const [shotType, setShotType] = useState<ShotType>('Defensive');
   // Power is NOT reset between balls — persists from last selection
   const [power, setPower] = useState(50);
@@ -39,9 +41,34 @@ export default memo(function BattingUI({ onSubmit, ballReady }: BattingUIProps) 
     }
   }, [ballReady]);
 
+  const shotTypeRef = useRef(shotType);
+  const powerRef = useRef(power);
+
+  useEffect(() => { shotTypeRef.current = shotType; }, [shotType]);
+  useEffect(() => { powerRef.current = power; }, [power]);
+
+  const handleSubmit = useCallback((isTimeout = false) => {
+    if (submitted) return;
+    setSubmitted(true);
+
+    // Haptic feedback
+    if (navigator.vibrate) {
+      navigator.vibrate(50);
+    }
+
+    if (isTimeout) {
+      const randomShot = SHOTS[Math.floor(Math.random() * SHOTS.length)].type;
+      const randomPower = Math.floor(Math.random() * 61) + 40; // 40-100
+      onSubmit({ shotType: randomShot, power: randomPower });
+    } else {
+      onSubmit({ shotType: shotTypeRef.current, power: powerRef.current });
+    }
+  }, [submitted, onSubmit]);
+
   // Timer countdown with requestAnimationFrame for buttery smooth progress
   useEffect(() => {
     if (submitted) return;
+    if (currentBallInOver === 1 && !currentBowlType) return; // Wait for bowler to select bowl type
 
     const startTime = Date.now();
     let animationFrameId: number;
@@ -68,25 +95,7 @@ export default memo(function BattingUI({ onSubmit, ballReady }: BattingUIProps) 
 
     animationFrameId = requestAnimationFrame(updateTimer);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [submitted]);
-
-  const handleSubmit = useCallback((isTimeout = false) => {
-    if (submitted) return;
-    setSubmitted(true);
-
-    // Haptic feedback
-    if (navigator.vibrate) {
-      navigator.vibrate(50);
-    }
-
-    if (isTimeout) {
-      const randomShot = SHOTS[Math.floor(Math.random() * SHOTS.length)].type;
-      const randomPower = Math.floor(Math.random() * 61) + 40; // 40-100
-      onSubmit({ shotType: randomShot, power: randomPower });
-    } else {
-      onSubmit({ shotType, power });
-    }
-  }, [submitted, shotType, power, onSubmit]);
+  }, [submitted, currentBallInOver, currentBowlType, handleSubmit]);
 
   const handleShotSelect = useCallback((shot: ShotType) => {
     setShotType(shot);
@@ -108,6 +117,22 @@ export default memo(function BattingUI({ onSubmit, ballReady }: BattingUIProps) 
       handleSubmit(false);
     }
   }, [shotType, handleSubmit]);
+
+  if (currentBallInOver === 1 && !currentBowlType) {
+    return (
+      <div className="w-full bg-gradient-to-br from-gray-900 to-gray-800 p-4 sm:p-5 rounded-xl text-center shadow-[0_0_40px_rgba(59,130,246,0.3)] border border-gray-700/50 backdrop-blur-xl">
+        <div className="flex justify-center mb-2">
+          <div className="w-8 h-8 rounded-full border-2 border-yellow-400 border-t-transparent animate-spin" />
+        </div>
+        <h3 className="text-base sm:text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-300 uppercase tracking-wider">
+          New Over Starting
+        </h3>
+        <p className="text-gray-500 mt-1 text-[10px] sm:text-xs">
+          Waiting for bowler to select bowling style...
+        </p>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (

@@ -8,8 +8,10 @@ interface BowlingUIProps {
   onSubmit: (action: BallAction) => void;
   ballReady: boolean;
   bouncersBowledInOver: number;
-  /** Current ball number in the over (0-5). When 0, it's a new over — ask for bowl type */
+  /** Current ball number in the over (1-6). When 1, it's a new over — ask for bowl type */
   currentBallInOver: number;
+  currentBowlType?: string;
+  onSelectBowlType?: (type: BowlType) => void;
 }
 
 /** Pitch zone maps Line + Length simultaneously */
@@ -46,8 +48,8 @@ const BOUNCER_ZONE: PitchZone = {
   line: 'Middle', length: 'Bouncer', label: 'Bouncer', x: 15, y: -15, w: 70, h: 15,
 };
 
-export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOver, currentBallInOver }: BowlingUIProps) {
-  const [bowlType, setBowlType] = useState<BowlType>('Pace');
+export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOver, currentBallInOver, currentBowlType, onSelectBowlType }: BowlingUIProps) {
+  const [bowlType, setBowlType] = useState<BowlType>((currentBowlType as BowlType) || 'Pace');
   const [bowlTypeLockedForOver, setBowlTypeLockedForOver] = useState(false);
   const [selectedZone, setSelectedZone] = useState<PitchZone | null>(null);
   const [timer, setTimer] = useState(15);
@@ -60,6 +62,16 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
 
   const bouncerDisabled = bouncersBowledInOver >= 2;
 
+  // Sync with server state
+  useEffect(() => {
+    if (currentBowlType) {
+      setBowlTypeLockedForOver(true);
+      setBowlType(currentBowlType as BowlType);
+    } else if (currentBallInOver === 0) { // 0 is start of over
+      setBowlTypeLockedForOver(false);
+    }
+  }, [currentBowlType, currentBallInOver]);
+
   // Reset on new ball — but bowl type stays locked for the over
   useEffect(() => {
     if (ballReady) {
@@ -69,11 +81,11 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
       setTimeLeft(15);
       
       // If it's the first ball of a new over, unlock bowl type so user can pick
-      if (currentBallInOver === 0) {
+      if (currentBallInOver === 0 && !currentBowlType) {
         setBowlTypeLockedForOver(false);
       }
     }
-  }, [ballReady, currentBallInOver]);
+  }, [ballReady, currentBallInOver, currentBowlType]);
 
   // Timer countdown with requestAnimationFrame
   useEffect(() => {
@@ -99,13 +111,19 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
       if (newTimeLeft > 0) {
         animationFrameId = requestAnimationFrame(updateTimer);
       } else {
-        handleAutoSubmit();
+        handleAutoSubmitRef.current();
       }
     };
 
     animationFrameId = requestAnimationFrame(updateTimer);
     return () => cancelAnimationFrame(animationFrameId);
   }, [submitted, bowlTypeLockedForOver]);
+
+  const selectedZoneRef = useRef(selectedZone);
+  const bowlTypeRef = useRef(bowlType);
+
+  useEffect(() => { selectedZoneRef.current = selectedZone; }, [selectedZone]);
+  useEffect(() => { bowlTypeRef.current = bowlType; }, [bowlType]);
 
   const handleFinalSubmit = useCallback((bt: BowlType, ln: Line, len: Length) => {
     if (submitted) return;
@@ -118,10 +136,11 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
     onSubmit({ bowlType: bt, line: ln, length: len });
   }, [submitted, onSubmit]);
 
-  const handleAutoSubmit = useCallback(() => {
+  const handleAutoSubmitRef = useRef(() => {});
+  handleAutoSubmitRef.current = () => {
     // Auto-submit with random defaults if timer runs out and no zone selected
-    let finalZone = selectedZone;
-    const finalBowlType = bowlType;
+    let finalZone = selectedZoneRef.current;
+    const finalBowlType = bowlTypeRef.current;
     
     if (!finalZone) {
       const validZones = bouncerDisabled 
@@ -131,7 +150,7 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
     }
     
     handleFinalSubmit(finalBowlType, finalZone.line, finalZone.length);
-  }, [selectedZone, bowlType, bouncerDisabled, handleFinalSubmit]);
+  };
 
   const handleZoneSelect = useCallback((zone: PitchZone) => {
     if (zone.length === 'Bouncer' && bouncerDisabled) return;
@@ -150,7 +169,10 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
   const handleBowlTypeSelect = useCallback((type: BowlType) => {
     setBowlType(type);
     setBowlTypeLockedForOver(true);
-  }, []);
+    if (onSelectBowlType) {
+      onSelectBowlType(type);
+    }
+  }, [onSelectBowlType]);
 
   // ── Bowl Type Selection Screen (shown at start of each over) ──
   if (!bowlTypeLockedForOver && !submitted) {
