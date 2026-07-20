@@ -39,11 +39,6 @@ export default function LandingPage({ onPlay, onGuestPlay }: LandingPageProps) {
   const [particles] = useState<Particle[]>(() => generateParticles(30));
   const revealRefs = useRef<(HTMLElement | null)[]>([]);
 
-  // Counter animation states
-  const [counters, setCounters] = useState({ players: 0, matches: 0, sixes: 0 });
-  const counterRef = useRef<HTMLDivElement>(null);
-  const counterAnimated = useRef(false);
-
   const addRevealRef = useCallback((el: HTMLElement | null) => {
     if (el && !revealRefs.current.includes(el)) {
       revealRefs.current.push(el);
@@ -77,49 +72,9 @@ export default function LandingPage({ onPlay, onGuestPlay }: LandingPageProps) {
     return () => observer.disconnect();
   }, []);
 
-  // Counter animation
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !counterAnimated.current) {
-          counterAnimated.current = true;
-          animateCounters();
-        }
-      },
-      { threshold: 0.5 }
-    );
-
-    if (counterRef.current) observer.observe(counterRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  const animateCounters = () => {
-    const targets = { players: 50000, matches: 200000, sixes: 1500000 };
-    const duration = 2000;
-    const start = performance.now();
-
-    const step = (now: number) => {
-      const progress = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
-      setCounters({
-        players: Math.floor(targets.players * eased),
-        matches: Math.floor(targets.matches * eased),
-        sixes: Math.floor(targets.sixes * eased),
-      });
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  };
-
   const scrollToSection = (id: string) => {
     setMenuOpen(false);
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const formatNumber = (n: number) => {
-    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-    if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'K';
-    return n.toString();
   };
 
   return (
@@ -189,21 +144,6 @@ export default function LandingPage({ onPlay, onGuestPlay }: LandingPageProps) {
               <button className="btn-secondary" onClick={onGuestPlay}>
                 👤 Play as Guest
               </button>
-            </div>
-
-            <div className="hero-stats" ref={counterRef}>
-              <div className="stat-item">
-                <div className="stat-number">{formatNumber(counters.players)}+</div>
-                <div className="stat-label">Active Players</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-number">{formatNumber(counters.matches)}+</div>
-                <div className="stat-label">Matches Played</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-number">{formatNumber(counters.sixes)}+</div>
-                <div className="stat-label">Sixes Hit</div>
-              </div>
             </div>
           </div>
 
