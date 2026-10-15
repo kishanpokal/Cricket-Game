@@ -84,6 +84,44 @@ export const createMatch = async (
   return matchId;
 };
 
+export const createBotMatch = async (
+  user: UserProfile,
+  format: MatchFormat,
+  customOvers: number,
+  stadium: string,
+  pitch: PitchType,
+  weather: Weather,
+  botDifficulty: 'Rookie' | 'Pro' | 'Legend' = 'Pro'
+) => {
+  const matchId = `bot-${Math.floor(100000 + Math.random() * 900000).toString()}`;
+
+  const botNames = ['Titan AI', 'Centurion Bot', 'Apex Striker AI', 'Viper Seamer Bot', 'Legend AI'];
+  const botName = botNames[Math.floor(Math.random() * botNames.length)];
+
+  const initialState: MatchState = {
+    status: 'toss',
+    format,
+    customOvers,
+    stadium,
+    pitch,
+    weather,
+    isBotMatch: true,
+    botDifficulty,
+    player1: { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, role: 'bat' },
+    player2: {
+      uid: 'bot-player-ai',
+      displayName: `${botName} [BOT]`,
+      photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${botName}`,
+      role: 'bowl',
+    },
+    lastUpdated: Date.now(),
+    createdAt: Date.now(),
+  };
+
+  await withRetry(() => set(ref(rtdb, `matches/${matchId}`), initialState));
+  return matchId;
+};
+
 export const joinMatch = async (matchId: string, user: UserProfile) => {
   return withRetry(async () => {
     const matchRef = ref(rtdb, `matches/${matchId}`);

@@ -56,33 +56,32 @@ export default function BallResultOverlay({ matchState }: BallResultOverlayProps
     let isBoundaryOrWicket = false;
 
     if (lastBall.isWide) {
-      resultData = { type: 'WIDE', text: '+1 RUN', color: 'text-[var(--color-wide)]', emoji: '↔️', bgClass: 'bg-yellow-900/30' };
+      resultData = { type: 'WIDE', text: '+1 EXTRA RUN', color: 'text-[#eab308]', emoji: '↔️', bgClass: 'bg-[#eab308]/20' };
     } else if (lastBall.isNoBall) {
-      resultData = { type: 'NO BALL!', text: `+${lastBall.runs + 1} RUNS & FREE HIT`, color: 'text-[var(--color-noball)]', emoji: '🚨', bgClass: 'bg-orange-900/30' };
+      resultData = { type: 'NO BALL!', text: `+${lastBall.runs + 1} RUNS • FREE HIT!`, color: 'text-[#f97316]', emoji: '🚨', bgClass: 'bg-[#f97316]/25' };
       isBoundaryOrWicket = true;
     } else if (lastBall.special === 'WICKET') {
-      resultData = { type: 'WICKET', text: lastBall.dismissalType || 'OUT!', color: 'text-[var(--color-wicket)]', emoji: '🔴', bgClass: 'bg-red-900/40' };
+      resultData = { type: 'WICKET!', text: lastBall.dismissalType || 'BOWLED OUT!', color: 'text-[#ff2a36]', emoji: '🔴', bgClass: 'bg-[#d9222a]/30' };
       isBoundaryOrWicket = true;
     } else if (lastBall.special === 'SIX') {
-      resultData = { type: 'SIX', text: '6 RUNS', color: 'text-[var(--color-six)]', emoji: '💥', bgClass: 'bg-purple-900/40' };
+      resultData = { type: 'MAXIMUM 6!', text: 'CLEARED THE ROPE!', color: 'text-[#ffb800]', emoji: '💥', bgClass: 'bg-[#ffb800]/25' };
       isBoundaryOrWicket = true;
     } else if (lastBall.special === 'FOUR') {
-      resultData = { type: 'FOUR', text: '4 RUNS', color: 'text-[var(--color-four)]', emoji: '🏏', bgClass: 'bg-green-900/40' };
+      resultData = { type: 'BOUNDARY 4!', text: 'CRACKING SHOT!', color: 'text-[#10b981]', emoji: '🏏', bgClass: 'bg-[#10b981]/25' };
       isBoundaryOrWicket = true;
     } else if (lastBall.runs === 3) {
-      resultData = { type: '3', text: '3 RUNS', color: 'text-blue-400', emoji: '🏃', bgClass: 'bg-blue-900/20' };
+      resultData = { type: '3 RUNS', text: 'GREAT RUNNING', color: 'text-[#f5efe6]', emoji: '🏃', bgClass: 'bg-[#1b4d2e]/25' };
     } else if (lastBall.runs === 2) {
-      resultData = { type: '2', text: '2 RUNS', color: 'text-cyan-400', emoji: '🏃', bgClass: 'bg-cyan-900/20' };
+      resultData = { type: '2 RUNS', text: 'COMFORTABLE DOUBLE', color: 'text-[#f5efe6]', emoji: '🏃', bgClass: 'bg-[#1b4d2e]/20' };
     } else if (lastBall.runs === 1) {
-      resultData = { type: '1', text: '1 RUN', color: 'text-white', emoji: '👟', bgClass: 'bg-black/10' };
+      resultData = { type: '1 RUN', text: 'SINGLE TAKEN', color: 'text-[#c8bead]', emoji: '👟', bgClass: 'bg-black/20' };
     } else if (lastBall.special === 'DOT') {
-      resultData = { type: 'DOT', text: 'NO RUN', color: 'text-gray-400', emoji: '⚫', bgClass: 'bg-black/20' };
+      resultData = { type: 'DOT BALL', text: 'SOLID DEFENCE', color: 'text-[#8c8273]', emoji: '⚫', bgClass: 'bg-black/30' };
     }
 
     if (resultData) {
       setResult(resultData);
       
-      // Play audio and show result immediately
       const am = audioManager.current;
       if (lastBall.commentary) am.speakCommentary(lastBall.commentary);
       if (isBoundaryOrWicket) am.cheerCrowd();
@@ -95,11 +94,11 @@ export default function BallResultOverlay({ matchState }: BallResultOverlayProps
       
       if (lastBall.special === 'SIX' && containerRef.current) {
         setTimeout(() => {
-          if (containerRef.current) createConfettiParticles(containerRef.current, 12);
+          if (containerRef.current) createConfettiParticles(containerRef.current, 14);
         }, 200);
       }
 
-      const dismissTime = (lastBall.special === 'SIX' || lastBall.special === 'WICKET') ? 2000 : 1500;
+      const dismissTime = (lastBall.special === 'SIX' || lastBall.special === 'WICKET') ? 2200 : 1600;
       setTimeout(() => {
         setShowResult(false);
       }, dismissTime);
@@ -108,7 +107,6 @@ export default function BallResultOverlay({ matchState }: BallResultOverlayProps
 
   return (
     <>
-      {/* Result Pop-up */}
       {showResult && result && (
         <div
           ref={containerRef}
@@ -117,49 +115,37 @@ export default function BallResultOverlay({ matchState }: BallResultOverlayProps
           role="alert"
           aria-live="assertive"
         >
-          {/* Background flash */}
-          <div className={`absolute inset-0 ${result.bgClass} animate-pulse`} />
+          {/* Floodlight Flash */}
+          <div className={`absolute inset-0 ${result.bgClass} backdrop-blur-xs transition-opacity duration-300`} />
 
-          {/* Main result display */}
+          {/* Broadcast Pop Card */}
           <div
-            className="relative flex flex-col items-center"
+            className="relative flex flex-col items-center bg-[#070c08]/90 px-8 py-6 rounded-3xl border border-[#f5efe6]/15 shadow-[0_20px_60px_rgba(0,0,0,0.9)]"
             style={{ animation: 'ballResultPop 1.3s ease-out forwards' }}
           >
-            {/* Emoji */}
-            <div className="text-6xl sm:text-7xl mb-2" style={{ animation: 'ballEmojiBounce 0.6s ease-out' }} aria-hidden="true">
+            {/* Animated Emoji Badge */}
+            <div className="text-5xl sm:text-6xl mb-1" style={{ animation: 'ballEmojiBounce 0.5s ease-out' }} aria-hidden="true">
               {result.emoji}
             </div>
 
-            {/* Main text */}
+            {/* Huge TV Title */}
             <div
-              className={`text-5xl sm:text-7xl font-black tracking-wider ${result.color}`}
+              className={`font-display text-6xl sm:text-8xl font-black uppercase tracking-wider leading-none ${result.color}`}
               style={{
-                textShadow: '0 0 40px currentColor, 0 4px 20px rgba(0,0,0,0.8)',
-                animation: 'ballTextSlam 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.15s both',
+                textShadow: '0 0 30px currentColor, 0 4px 20px rgba(0,0,0,0.9)',
+                animation: 'ballTextSlam 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both',
               }}
             >
               {result.type}
             </div>
 
-            {/* Sub text */}
-            <div className="text-base sm:text-xl font-bold text-white/80 mt-2 tracking-widest uppercase" style={{ animation: 'ballSubFade 0.6s ease-out 0.3s both' }}>
+            {/* Broadcast Commentary Subtitle */}
+            <div
+              className="text-xs sm:text-sm font-sports uppercase tracking-[0.2em] font-extrabold text-[#f5efe6] mt-2 bg-[#122417] px-4 py-1 rounded-full border border-[#f5efe6]/10"
+              style={{ animation: 'ballSubFade 0.4s ease-out 0.25s both' }}
+            >
               {result.text}
             </div>
-
-            {/* Decorative ring */}
-            {(result.type === 'SIX' || result.type === 'WICKET') && (
-              <div
-                className={`absolute w-40 h-40 sm:w-48 sm:h-48 rounded-full border-4 ${
-                  result.type === 'SIX' ? 'border-[var(--color-six)]/50' : 'border-[var(--color-wicket)]/50'
-                }`}
-                style={{ animation: 'ballRingExpand 0.8s ease-out forwards' }}
-              />
-            )}
-
-            {/* Second expanding ring */}
-            {result.type === 'SIX' && (
-              <div className="absolute w-32 h-32 rounded-full border-2 border-purple-400/30" style={{ animation: 'ballRingExpand 1s ease-out 0.2s forwards' }} />
-            )}
           </div>
         </div>
       )}

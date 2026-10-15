@@ -10,6 +10,7 @@ import type {
   Line,
   Length,
 } from '../types/cricket';
+import { generateAnimationSequence } from './animationEngine';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -394,6 +395,37 @@ export const calculateBallOutcome = (
     isNoBall: isNoBall || false,
     isWide: false,
     isFreeHit: matchContext.isFreeHit || false,
+    animationSequence: generateAnimationSequence({
+      batAction: {
+        shotType,
+        power,
+      },
+      bowlAction: {
+        bowlType,
+        line,
+        length,
+      },
+      outcome: {
+        runs,
+        wicket: isWicket,
+        dismissalType,
+        special,
+        isNoBall: isNoBall || false,
+        isWide: false,
+      },
+      matchContext: {
+        overs: matchContext.overs,
+        balls: matchContext.balls,
+        score: matchContext.score,
+        wickets: matchContext.wickets,
+        target: matchContext.target ?? null,
+        pitch,
+        weather,
+        format: _format,
+        isDeathOver: matchContext.isDeathOver || false,
+        isPowerplay: matchContext.isPowerplay || false,
+      },
+    }),
   };
 
   return outcomeResult;
@@ -687,4 +719,176 @@ export const getBowlingSpeed = (bowlType: BowlType): string => {
   // Swing
   const speed = 120 + Math.floor(Math.random() * 16);
   return `${speed} km/h`;
+};
+
+/**
+ * Recommend optimal bowl type for the bot based on pitch, weather, and difficulty.
+ */
+export const getBotRecommendedBowlType = (
+  pitch: PitchType,
+  weather: Weather,
+  difficulty: 'Rookie' | 'Pro' | 'Legend' = 'Pro'
+): BowlType => {
+  if (difficulty === 'Rookie') {
+    const allTypes: BowlType[] = ['Pace', 'Spin', 'Swing'];
+    return allTypes[Math.floor(Math.random() * allTypes.length)];
+  }
+
+  // Tactical pitch reading for Pro & Legend
+  if (pitch === 'Dusty') return 'Spin';
+  if (pitch === 'Green') return weather === 'Overcast' ? 'Swing' : 'Pace';
+  if (weather === 'Overcast') return 'Swing';
+  if (pitch === 'Hard') return 'Pace';
+
+  const types: BowlType[] = ['Pace', 'Spin', 'Swing'];
+  return types[Math.floor(Math.random() * types.length)];
+};
+
+/**
+ * Autonomously generate realistic AI bot moves for both batting and bowling.
+ */
+export const generateBotAction = (
+  isBatting: boolean,
+  difficulty: 'Rookie' | 'Pro' | 'Legend' = 'Pro',
+  pitch: PitchType,
+  weather: Weather,
+  context: {
+    overs: number;
+    balls: number;
+    score: number;
+    wickets: number;
+    target?: number;
+    isFreeHit?: boolean;
+    currentBowlType?: BowlType;
+    maxOvers: number;
+    p1Action?: BallAction;
+  }
+): BallAction => {
+  const { overs, balls, score, target, isFreeHit, currentBowlType, maxOvers, p1Action } = context;
+
+  // ─── BOT IS BATTING ──────────────────────────────────────────────────────────
+  if (isBatting) {
+    const deathOver = isDeathOver(overs, maxOvers >= 20 ? 'T20' : 'custom', maxOvers);
+    const requiredRunRate = target
+      ? calculateRequiredRunRate(target, score, maxOvers, overs, balls)
+      : 0;
+
+    // Free hit situation: maximum aggression
+    if (isFreeHit) {
+      const aggressiveShots: ShotType[] = ['Loft', 'Slog', 'Pull'];
+      const shotType = aggressiveShots[Math.floor(Math.random() * aggressiveShots.length)];
+      const power = difficulty === 'Legend' 
+        ? Math.floor(Math.random() * 11) + 90 // 90 - 100
+        : difficulty === 'Pro' 
+        ? Math.floor(Math.random() * 16) + 80 // 80 - 95
+        : Math.floor(Math.random() * 21) + 65; // 65 - 85
+      return { shotType, power };
+    }
+
+    if (difficulty === 'Rookie') {
+      const shots: ShotType[] = ['Drive', 'Defensive', 'Cut', 'Pull', 'Drive'];
+      const shotType = shots[Math.floor(Math.random() * shots.length)];
+      const power = Math.floor(Math.random() * 31) + 40; // 40 - 70
+      return { shotType, power };
+    }
+
+    if (difficulty === 'Pro') {
+      // High pressure chase or death overs: attack
+      if (deathOver || requiredRunRate > 10) {
+        const shots: ShotType[] = ['Loft', 'Slog', 'Drive', 'Pull'];
+        const shotType = shots[Math.floor(Math.random() * shots.length)];
+        const power = Math.floor(Math.random() * 21) + 75; // 75 - 95
+        return { shotType, power };
+      }
+
+      // Early collapse: rebuild
+      if (context.wickets >= 3 && overs < 5) {
+        const shots: ShotType[] = ['Defensive', 'Drive', 'Cut'];
+        const shotType = shots[Math.floor(Math.random() * shots.length)];
+        const power = Math.floor(Math.random() * 21) + 50; // 50 - 70
+        return { shotType, power };
+      }
+
+      // Standard innings building
+      const shots: ShotType[] = ['Drive', 'Cut', 'Pull', 'Loft', 'Drive'];
+      const shotType = shots[Math.floor(Math.random() * shots.length)];
+      const power = Math.floor(Math.random() * 26) + 60; // 60 - 85
+      return { shotType, power };
+    }
+
+    // Legend difficulty: anticipatory elite reading
+    if (p1Action?.length) {
+      if (p1Action.length === 'Short' || p1Action.length === 'Bouncer') {
+        const shotType = Math.random() > 0.4 ? 'Pull' : 'Cut';
+        return { shotType, power: Math.floor(Math.random() * 16) + 80 };
+      }
+      if (p1Action.length === 'Full' || p1Action.length === 'Yorker') {
+        const shotType = Math.random() > 0.4 ? 'Drive' : 'Slog';
+        return { shotType, power: Math.floor(Math.random() * 16) + 80 };
+      }
+    }
+
+    if (deathOver || requiredRunRate > 9) {
+      const shots: ShotType[] = ['Slog', 'Loft', 'Pull', 'Drive'];
+      const shotType = shots[Math.floor(Math.random() * shots.length)];
+      return { shotType, power: Math.floor(Math.random() * 16) + 84 };
+    }
+
+    const tacticalShots: ShotType[] = ['Drive', 'Cut', 'Pull', 'Sweep', 'Loft'];
+    const shotType = tacticalShots[Math.floor(Math.random() * tacticalShots.length)];
+    return { shotType, power: Math.floor(Math.random() * 21) + 70 };
+  }
+
+  // ─── BOT IS BOWLING ──────────────────────────────────────────────────────────
+  const bowlType = currentBowlType || getBotRecommendedBowlType(pitch, weather, difficulty);
+  const deathOver = isDeathOver(overs, maxOvers >= 20 ? 'T20' : 'custom', maxOvers);
+
+  if (difficulty === 'Rookie') {
+    const lines: Line[] = ['Off Stump', 'Middle', 'Off Stump', 'Outside Off', 'Leg'];
+    const lengths: Length[] = ['Good Length', 'Full', 'Good Length', 'Short'];
+    const line = lines[Math.floor(Math.random() * lines.length)];
+    const length = lengths[Math.floor(Math.random() * lengths.length)];
+    return { bowlType, line, length };
+  }
+
+  if (difficulty === 'Pro') {
+    if (deathOver) {
+      // In death overs, target yorkers and wide yorkers
+      const lines: Line[] = ['Off Stump', 'Outside Off', 'Middle'];
+      const lengths: Length[] = ['Yorker', 'Yorker', 'Good Length', 'Bouncer'];
+      return {
+        bowlType,
+        line: lines[Math.floor(Math.random() * lines.length)],
+        length: lengths[Math.floor(Math.random() * lengths.length)],
+      };
+    }
+
+    const lines: Line[] = ['Off Stump', 'Off Stump', 'Outside Off', 'Middle'];
+    const lengths: Length[] = ['Good Length', 'Good Length', 'Full', 'Short', 'Yorker'];
+    return {
+      bowlType,
+      line: lines[Math.floor(Math.random() * lines.length)],
+      length: lengths[Math.floor(Math.random() * lengths.length)],
+    };
+  }
+
+  // Legend difficulty: pinpoint precision
+  if (deathOver) {
+    const lines: Line[] = ['Off Stump', 'Outside Off', 'Off Stump'];
+    const lengths: Length[] = ['Yorker', 'Yorker', 'Bouncer'];
+    return {
+      bowlType,
+      line: lines[Math.floor(Math.random() * lines.length)],
+      length: lengths[Math.floor(Math.random() * lengths.length)],
+    };
+  }
+
+  // Target weakness corridor
+  const lines: Line[] = ['Off Stump', 'Outside Off', 'Off Stump'];
+  const lengths: Length[] = ['Good Length', 'Good Length', 'Short', 'Yorker'];
+  return {
+    bowlType,
+    line: lines[Math.floor(Math.random() * lines.length)],
+    length: lengths[Math.floor(Math.random() * lengths.length)],
+  };
 };

@@ -297,6 +297,134 @@ export class AudioManager {
     }
   }
 
+  /** Play bowler runup footsteps & approach whoosh */
+  playBowlerRunup(): void {
+    if (!this.canPlayEffect() || !this.ctx || !this.masterGain) return;
+    this.trackEffect();
+
+    try {
+      const now = this.ctx.currentTime;
+      // 3 rhythmic footstep thuds
+      [0, 0.22, 0.44].forEach((t, idx) => {
+        const osc = this.ctx!.createOscillator();
+        const gain = this.ctx!.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(140 + idx * 25, now + t);
+        osc.frequency.exponentialRampToValueAtTime(40, now + t + 0.08);
+        gain.gain.setValueAtTime(this.volume * 0.35, now + t);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + t + 0.08);
+        osc.connect(gain);
+        gain.connect(this.masterGain!);
+        osc.start(now + t);
+        osc.stop(now + t + 0.08);
+      });
+
+      // Release whoosh
+      const bufSize = Math.floor(this.ctx.sampleRate * 0.25);
+      const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.sin((i / bufSize) * Math.PI);
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(800, now + 0.55);
+      filter.frequency.exponentialRampToValueAtTime(320, now + 0.8);
+      const nGain = this.ctx.createGain();
+      nGain.gain.setValueAtTime(this.volume * 0.4, now + 0.55);
+      nGain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+      noise.connect(filter);
+      filter.connect(nGain);
+      nGain.connect(this.masterGain);
+      noise.start(now + 0.55);
+
+      setTimeout(() => this.untrackEffect(), 850);
+    } catch (e) {
+      console.error('playBowlerRunup error:', e);
+      this.untrackEffect();
+    }
+  }
+
+  /** Play ball pitching bounce sound on turf */
+  playBallPitch(): void {
+    if (!this.canPlayEffect() || !this.ctx || !this.masterGain) return;
+    this.trackEffect();
+
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(240, now);
+      osc.frequency.exponentialRampToValueAtTime(65, now + 0.09);
+      gain.gain.setValueAtTime(this.volume * 0.75, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.09);
+      setTimeout(() => this.untrackEffect(), 110);
+    } catch (e) {
+      console.error('playBallPitch error:', e);
+      this.untrackEffect();
+    }
+  }
+
+  /** Play wooden stumps clatter / timber sound */
+  playTimber(): void {
+    if (!this.canPlayEffect() || !this.ctx || !this.masterGain) return;
+    this.trackEffect();
+
+    try {
+      const now = this.ctx.currentTime;
+      [680, 520, 390].forEach((freq, idx) => {
+        const osc = this.ctx!.createOscillator();
+        const gain = this.ctx!.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+        osc.frequency.exponentialRampToValueAtTime(75, now + idx * 0.04 + 0.15);
+        gain.gain.setValueAtTime(this.volume * 0.85, now + idx * 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.04 + 0.15);
+        osc.connect(gain);
+        gain.connect(this.masterGain!);
+        osc.start(now + idx * 0.04);
+        osc.stop(now + idx * 0.04 + 0.15);
+      });
+      setTimeout(() => this.untrackEffect(), 450);
+    } catch (e) {
+      console.error('playTimber error:', e);
+      this.untrackEffect();
+    }
+  }
+
+  /** Play stadium boundary celebration fanfare */
+  playBoundarySiren(): void {
+    if (!this.canPlayEffect() || !this.ctx || !this.masterGain) return;
+    this.trackEffect();
+
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.linearRampToValueAtTime(880, now + 0.25);
+      osc.frequency.linearRampToValueAtTime(520, now + 0.5);
+      gain.gain.setValueAtTime(this.volume * 0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.55);
+      setTimeout(() => this.untrackEffect(), 600);
+    } catch (e) {
+      console.error('playBoundarySiren error:', e);
+      this.untrackEffect();
+    }
+  }
+
   // ─── Crowd Noise ─────────────────────────────────────────────────────────
 
   /** Start ambient crowd noise */

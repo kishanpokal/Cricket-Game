@@ -76,6 +76,26 @@ export default function Toss() {
     }
   }, [tossing, matchState?.toss]);
 
+  // Bot auto-decision if Bot wins the toss
+  useEffect(() => {
+    if (matchState?.isBotMatch && matchState.toss && matchState.toss.winner === 'bot-player-ai' && !submittingDecision && !tossing) {
+      const timer = setTimeout(() => {
+        const pitch = matchState.pitch;
+        const weather = matchState.weather;
+        let botChoice: TossDecision = 'bat';
+        if (pitch === 'Green' || weather === 'Overcast') {
+          botChoice = 'bowl';
+        } else if (pitch === 'Dusty') {
+          botChoice = 'bat';
+        } else {
+          botChoice = Math.random() > 0.5 ? 'bat' : 'bowl';
+        }
+        handleDecision(botChoice);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [matchState?.isBotMatch, matchState?.toss?.winner, matchState?.pitch, matchState?.weather, submittingDecision, tossing]);
+
   const handleLeaveMatch = async () => {
     if (!matchId || !user) return;
     await leaveMatch(matchId, user.uid);
@@ -92,10 +112,10 @@ export default function Toss() {
 
   if (!matchState || !user) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[var(--color-night-sky)] text-white">
+      <div className="h-screen flex items-center justify-center bg-[#070c08] text-[#f5efe6]">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-full border-2 border-green-400 border-t-transparent animate-spin mx-auto mb-4" />
-          <p className="text-gray-400 font-semibold">Loading Toss...</p>
+          <div className="w-12 h-12 rounded-full border-2 border-[#ffb800] border-t-transparent animate-spin mx-auto mb-4" />
+          <p className="font-display text-2xl tracking-wide uppercase text-[#ffb800]">Preparing Stadium Pitch...</p>
         </div>
       </div>
     );
@@ -108,24 +128,33 @@ export default function Toss() {
     const opponentName = isP1 ? matchState.player2?.displayName : matchState.player1.displayName;
 
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-[var(--color-night-sky)] text-white p-6">
-        {opponentAbandoned ? (
-          <>
-            <div className="text-6xl mb-6 animate-[scale-in_0.5s_ease-out]" aria-hidden="true">🏆</div>
-            <h1 className="text-4xl font-bold mb-2 text-green-400">You Win!</h1>
-            <p className="text-xl text-gray-400 mb-2">{opponentName} left the match</p>
-            <p className="text-gray-500 mb-8">Victory by forfeit</p>
-          </>
-        ) : (
-          <>
-            <div className="text-6xl mb-6" aria-hidden="true">😞</div>
-            <h1 className="text-4xl font-bold mb-2 text-red-400">Match Forfeited</h1>
-            <p className="text-xl text-gray-400 mb-8">You left the match.</p>
-          </>
-        )}
-        <button onClick={() => navigate('/')} className="px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-lg transition cursor-pointer">
-          Return to Lobby
-        </button>
+      <div className="h-screen flex flex-col items-center justify-center bg-[#070c08] text-[#f5efe6] p-6 relative">
+        <div className="w-full max-w-md bg-[#112217] border border-[#f5efe6]/10 rounded-2xl p-8 text-center shadow-2xl">
+          {opponentAbandoned ? (
+            <>
+              <div className="text-6xl mb-4" aria-hidden="true">🏆</div>
+              <h1 className="font-display text-5xl font-bold text-[#ffb800] tracking-wide uppercase leading-none">
+                VICTORY BY FORFEIT
+              </h1>
+              <p className="text-base text-[#c8bead] mt-2 mb-1">{opponentName} forfeited the match</p>
+              <p className="text-xs font-mono text-[#8c8273] uppercase tracking-wider mb-8">Points credited to your profile</p>
+            </>
+          ) : (
+            <>
+              <div className="text-6xl mb-4" aria-hidden="true">⚠️</div>
+              <h1 className="font-display text-5xl font-bold text-[#ff2a36] tracking-wide uppercase leading-none">
+                MATCH FORFEITED
+              </h1>
+              <p className="text-base text-[#c8bead] mt-2 mb-8">You left the pavilion before the match began.</p>
+            </>
+          )}
+          <button 
+            onClick={() => navigate('/')} 
+            className="w-full py-3.5 bg-gradient-to-r from-[#1b4d2e] to-[#24623e] hover:from-[#24623e] hover:to-[#2e7d4c] rounded-xl font-display text-2xl tracking-wide uppercase font-bold transition cursor-pointer border border-[#4ade80]/30 shadow-lg"
+          >
+            Return to Pavilion
+          </button>
+        </div>
       </div>
     );
   }
@@ -134,48 +163,96 @@ export default function Toss() {
   const isPlayer2 = matchState.player2?.uid === user.uid;
   const opponentName = isPlayer1 ? matchState.player2?.displayName : matchState.player1.displayName;
 
+  // Waiting for Player 2
   if (matchState.status === 'waiting') {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-[var(--color-night-sky)] p-6 text-white">
-        <div className="text-5xl mb-6" aria-hidden="true">🏟️</div>
-        <h2 className="text-xl sm:text-2xl mb-2 font-black text-center">Room Created</h2>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#070c08] p-4 sm:p-6 text-[#f5efe6] relative overflow-hidden">
+        {/* Stadium Floodlight */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div 
+            className="absolute -top-[10%] left-1/2 -translate-x-1/2 w-[700px] h-[350px]"
+            style={{
+              background: 'radial-gradient(ellipse at center, rgba(34, 92, 55, 0.3) 0%, transparent 70%)',
+              filter: 'blur(50px)',
+            }}
+          />
+        </div>
 
-        {/* Room code with copy */}
-        <div className="flex items-center gap-2 mb-6">
-          <div className="bg-gray-800 px-6 py-3 rounded-xl border-2 border-dashed border-green-500/50 text-center">
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Room Code</p>
-            <p className="text-4xl font-mono font-black text-green-400 tracking-[0.3em]">{matchId}</p>
+        <div className="w-full max-w-lg bg-gradient-to-b from-[#112217] to-[#0a140d] rounded-2xl p-6 sm:p-10 border border-[#f5efe6]/10 shadow-[0_24px_60px_rgba(0,0,0,0.8)] text-center relative z-10">
+          
+          <div className="w-16 h-16 rounded-2xl bg-[#1b4d2e]/40 border-2 border-[#ffb800]/40 flex items-center justify-center mx-auto text-3xl mb-4 shadow-[0_0_20px_rgba(27,77,46,0.6)]">
+            🏟️
           </div>
+
+          <h1 className="font-display text-4xl sm:text-5xl font-bold uppercase text-[#f5efe6] leading-none">
+            MATCH PAVILION READY
+          </h1>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#ffb800] font-semibold mt-1 mb-6">
+            WAITING FOR OPPONENT
+          </p>
+
+          {/* Room Code Card with Copy */}
+          <div className="bg-[#070c08] border-2 border-dashed border-[#ffb800]/50 rounded-2xl p-5 mb-6 text-center shadow-inner">
+            <span className="text-[10px] text-[#8c8273] uppercase tracking-[0.2em] font-extrabold block mb-1">
+              SHARE THIS ROOM CODE
+            </span>
+            <div className="flex items-center justify-center gap-3">
+              <span className="font-sports text-4xl sm:text-5xl font-black text-[#ffb800] tracking-[0.25em]">
+                {matchId}
+              </span>
+              <button
+                onClick={handleCopyCode}
+                className="p-3 bg-[#132419] hover:bg-[#1a3824] rounded-xl border border-[#f5efe6]/15 transition cursor-pointer"
+                title="Copy Room Code"
+              >
+                {copied ? <Check className="w-5 h-5 text-[#4ade80]" /> : <Copy className="w-5 h-5 text-[#ffb800]" />}
+              </button>
+            </div>
+            {copied && (
+              <span className="text-[11px] text-[#4ade80] font-bold uppercase tracking-wider block mt-1.5">
+                ✓ Copied to clipboard! Send to your friend.
+              </span>
+            )}
+          </div>
+
+          {/* Versus Lineup */}
+          <div className="flex items-center justify-between bg-[#0e1a12] rounded-xl p-4 border border-[#f5efe6]/08 mb-6">
+            <div className="text-center flex-1">
+              <img 
+                src={matchState.player1.photoURL} 
+                alt="P1" 
+                className="w-14 h-14 rounded-full mx-auto mb-2 border-2 border-[#4ade80] shadow-md" 
+              />
+              <p className="font-bold text-xs truncate max-w-[110px] mx-auto text-[#f5efe6]">
+                {matchState.player1.displayName}
+              </p>
+              <span className="text-[10px] text-[#4ade80] font-semibold uppercase tracking-wider">
+                ● Ready on Pitch
+              </span>
+            </div>
+
+            <div className="font-display text-3xl font-bold text-[#ffb800] px-3">
+              VS
+            </div>
+
+            <div className="text-center flex-1 opacity-60">
+              <div className="w-14 h-14 rounded-full bg-[#1b3323] mx-auto mb-2 flex items-center justify-center text-xl border-2 border-dashed border-[#8c8273]">
+                ?
+              </div>
+              <p className="font-bold text-xs text-[#8c8273]">Awaiting Opponent</p>
+              <span className="text-[10px] text-[#ffb800] animate-pulse font-semibold uppercase tracking-wider">
+                Connecting...
+              </span>
+            </div>
+          </div>
+
           <button
-            onClick={handleCopyCode}
-            className="p-3 bg-gray-800 hover:bg-gray-700 rounded-xl border border-gray-700 transition cursor-pointer"
-            aria-label="Copy room code"
+            onClick={() => navigate('/')}
+            className="w-full py-3 bg-[#16271c] hover:bg-[#1e3827] rounded-xl font-display text-xl uppercase tracking-wider font-bold transition cursor-pointer border border-[#f5efe6]/10 text-[#c8bead]"
           >
-            {copied ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5 text-gray-400" />}
+            Cancel & Return to Pavilion
           </button>
         </div>
-
-        <p className="text-gray-400 mb-6 animate-pulse text-sm">Waiting for opponent to join...</p>
-
-        <div className="flex gap-6 bg-gray-800/50 rounded-2xl p-6 border border-gray-700/50">
-          <div className="text-center">
-            <img src={matchState.player1.photoURL} alt="P1" className="w-16 h-16 rounded-full mx-auto mb-2 border-2 border-green-500" />
-            <p className="font-bold text-sm">{matchState.player1.displayName}</p>
-            <p className="text-[10px] text-green-400 font-semibold">Ready</p>
-          </div>
-          <div className="flex items-center text-gray-600 font-black text-2xl">VS</div>
-          <div className="text-center opacity-50">
-            <div className="w-16 h-16 rounded-full bg-gray-700 mx-auto mb-2 flex items-center justify-center text-2xl border-2 border-gray-600">?</div>
-            <p className="font-bold text-sm text-gray-400">Waiting...</p>
-          </div>
-        </div>
-
-        <button
-          onClick={() => navigate('/')}
-          className="mt-8 px-6 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold transition cursor-pointer border border-gray-700"
-        >
-          Cancel & Return
-        </button>
       </div>
     );
   }
@@ -202,13 +279,14 @@ export default function Toss() {
   const isWinner = tossState?.winner === user.uid;
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[var(--color-pitch-green-dark)] to-[var(--color-pitch-green)] p-6 relative overflow-hidden">
-      {/* Leave button */}
-      <div className="absolute top-4 right-4 flex items-center gap-3 z-10">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#070c08] text-[#f5efe6] p-4 sm:p-6 relative overflow-hidden">
+      
+      {/* Top Header Controls */}
+      <div className="absolute top-4 right-4 flex items-center gap-3 z-20">
         {matchState.player2 && (
-          <div className="flex items-center gap-2">
-            <div className={`w-2.5 h-2.5 rounded-full ${opponentOnline ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
-            <span className="text-sm text-white/80">
+          <div className="flex items-center gap-2 bg-[#0e1a12] px-3 py-1.5 rounded-full border border-[#f5efe6]/10 text-xs">
+            <span className={`w-2 h-2 rounded-full ${opponentOnline ? 'bg-[#4ade80]' : 'bg-[#ff2a36] animate-pulse'}`} />
+            <span className="text-[#c8bead] font-medium">
               {opponentOnline ? `${opponentName} online` : `${opponentName} disconnected`}
             </span>
           </div>
@@ -216,93 +294,153 @@ export default function Toss() {
         <LeaveConfirmDialog onConfirm={handleLeaveMatch} />
       </div>
 
-      {/* Decorative grass pattern */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, transparent 20%, #000 120%)' }} />
+      {/* Floodlight Backlight */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div 
+          className="absolute -top-[15%] left-1/2 -translate-x-1/2 w-[800px] h-[400px]"
+          style={{
+            background: 'radial-gradient(ellipse at center, rgba(34, 92, 55, 0.35) 0%, transparent 70%)',
+            filter: 'blur(50px)',
+          }}
+        />
+      </div>
 
-      <h1 className="text-3xl sm:text-4xl font-black text-white mb-8 tracking-widest uppercase drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] animate-[slide-up_0.4s_ease-out]">
-        The Toss
-      </h1>
-
-      {/* Opponent disconnected warning */}
-      {!opponentOnline && matchState.player2 && (
-        <div className="mb-6 bg-yellow-900/40 border border-yellow-600/50 rounded-xl p-4 text-center animate-[scale-in_0.2s_ease-out]">
-          <p className="text-yellow-400 font-semibold">⚠️ {opponentName} appears to be disconnected</p>
-          <p className="text-gray-300 text-sm">Waiting for reconnection... You'll win by forfeit in 10s</p>
-        </div>
-      )}
-
-      {/* Toss call phase */}
-      {!tossState && isPlayer2 && (
-        <div className="bg-gray-900/80 backdrop-blur-xl p-8 rounded-3xl text-center shadow-2xl border border-green-500/20 animate-[scale-in_0.3s_ease-out]">
-          <h2 className="text-2xl font-bold mb-6 text-white">Call the coin!</h2>
-          <div className="flex gap-4">
-            <button
-              onClick={() => handleCall('heads')}
-              className="flex-1 bg-gradient-to-br from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 py-4 px-8 rounded-xl font-black text-xl text-yellow-900 shadow-[0_4px_20px_rgba(234,179,8,0.3)] transition cursor-pointer"
-            >
-              👑 Heads
-            </button>
-            <button
-              onClick={() => handleCall('tails')}
-              className="flex-1 bg-gradient-to-br from-gray-500 to-gray-600 hover:from-gray-400 hover:to-gray-500 py-4 px-8 rounded-xl font-black text-xl text-white shadow-lg transition cursor-pointer"
-            >
-              🪙 Tails
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!tossState && isPlayer1 && (
-        <div className="text-xl text-white text-center animate-pulse bg-gray-900/50 px-8 py-4 rounded-2xl backdrop-blur-sm">
-          Waiting for {opponentName} to call...
-        </div>
-      )}
-
-      {/* Coin flip animation */}
-      {tossing && (
-        <div className="text-center animate-[scale-in_0.2s_ease-out]">
-          <div className="text-7xl mb-4" style={{ animation: 'coin-flip 1.5s ease-out' }}>🪙</div>
-          <p className="text-xl text-white animate-pulse">Flipping coin...</p>
-        </div>
-      )}
-
-      {/* Toss result + decision */}
-      {tossState && tossState.winner !== 'pending' && !tossing && (
-        <div className="bg-gray-900/80 backdrop-blur-xl p-8 rounded-3xl text-center shadow-2xl border border-green-500/20 animate-[scale-in_0.3s_ease-out] max-w-md w-full">
-          <div className="text-5xl mb-3" aria-hidden="true">{tossState.result === 'heads' ? '👑' : '🪙'}</div>
-          <h2 className="text-3xl font-black mb-1 text-white">{tossState.result.toUpperCase()}!</h2>
-          <p className="text-lg mb-6 text-gray-300">
-            {isWinner ? '🎉 You won the toss!' : `${opponentName} won the toss.`}
+      {/* Main Toss Box */}
+      <div className="w-full max-w-md relative z-10">
+        
+        {/* Title */}
+        <div className="text-center mb-8">
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#ffb800] block mb-1">
+            OFFICIAL MATCH COIN TOSS
+          </span>
+          <h1 className="font-display text-5xl sm:text-6xl font-bold tracking-wide text-[#f5efe6] uppercase leading-none">
+            THE TOSS
+          </h1>
+          <p className="text-xs text-[#8c8273] font-mono mt-1">
+            VENUE: {matchState.stadium || "Lord's"} • {matchState.format || 'T20'} FORMAT
           </p>
+        </div>
 
-          {isWinner && !submittingDecision ? (
-            <div>
-              <h3 className="mb-4 text-gray-400 text-sm font-semibold uppercase tracking-wider">What will you do?</h3>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleDecision('bat')}
-                  className="flex-1 bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 py-3 px-6 rounded-xl font-bold text-base sm:text-lg cursor-pointer transition shadow-[0_4px_15px_rgba(59,130,246,0.3)]"
-                >
-                  🏏 Bat First
-                </button>
-                <button
-                  onClick={() => handleDecision('bowl')}
-                  className="flex-1 bg-gradient-to-br from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 py-3 px-6 rounded-xl font-bold text-base sm:text-lg cursor-pointer transition shadow-[0_4px_15px_rgba(239,68,68,0.3)]"
-                >
-                  🎯 Bowl First
-                </button>
+        {/* Opponent Disconnected Warning */}
+        {!opponentOnline && matchState.player2 && (
+          <div className="mb-6 bg-[#2a1215] border border-[#ff2a36]/50 rounded-2xl p-4 text-center animate-[scale-in_0.2s_ease-out]">
+            <p className="text-[#ff2a36] font-bold text-sm">⚠️ {opponentName} disconnected</p>
+            <p className="text-[#c8bead] text-xs mt-0.5">Waiting for reconnection... Forfeit win in 10s</p>
+          </div>
+        )}
+
+        {/* Phase 1: Calling Heads or Tails (Player 2 or Human in Bot Match) */}
+        {!tossState && (isPlayer2 || matchState.isBotMatch) && (
+          <div className="bg-gradient-to-b from-[#112217] to-[#0a140d] rounded-2xl p-8 border border-[#f5efe6]/10 shadow-2xl text-center">
+            
+            {/* 3D Coin Graphic */}
+            <div className="w-24 h-24 rounded-full mx-auto mb-6 bg-gradient-to-br from-[#ffd000] via-[#ffb800] to-[#b38000] p-1.5 shadow-[0_0_35px_rgba(255,184,0,0.5)] border-2 border-white/40 flex items-center justify-center">
+              <div className="w-full h-full rounded-full border-2 border-dashed border-[#735000] flex items-center justify-center text-3xl font-black text-[#5a3e00]">
+                🏏
               </div>
             </div>
-          ) : isWinner && submittingDecision ? (
-            <div className="flex items-center justify-center gap-2 text-gray-400">
-              <div className="w-5 h-5 rounded-full border-2 border-green-400 border-t-transparent animate-spin" />
-              Starting match...
+
+            <h2 className="font-display text-3xl font-bold uppercase text-[#f5efe6] mb-1">
+              CALL THE COIN
+            </h2>
+            <p className="text-xs text-[#c8bead] mb-6">
+              {matchState.isBotMatch ? 'Call Heads or Tails against the AI.' : 'You are the visiting player. Choose Heads or Tails for the toss.'}
+            </p>
+
+            <div className="flex gap-4">
+              <button
+                onClick={() => handleCall('heads')}
+                className="flex-1 py-4 px-6 rounded-xl font-display text-2xl uppercase tracking-wider font-bold bg-gradient-to-r from-[#ffb800] to-[#e69d00] hover:from-[#ffd000] hover:to-[#ffb800] text-[#070c08] shadow-[0_6px_20px_rgba(255,184,0,0.4)] transition cursor-pointer"
+              >
+                👑 Heads
+              </button>
+              <button
+                onClick={() => handleCall('tails')}
+                className="flex-1 py-4 px-6 rounded-xl font-display text-2xl uppercase tracking-wider font-bold bg-[#1e3a27] hover:bg-[#284f35] text-[#f5efe6] border border-[#f5efe6]/15 transition cursor-pointer shadow-md"
+              >
+                🪙 Tails
+              </button>
             </div>
-          ) : (
-            <div className="text-gray-400 italic animate-pulse">Waiting for opponent's decision...</div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+
+        {/* Phase 1 Waiting: Player 1 Waiting for Player 2 Call (PvP only) */}
+        {!tossState && isPlayer1 && !matchState.isBotMatch && (
+          <div className="bg-[#112217] rounded-2xl p-8 border border-[#f5efe6]/10 text-center shadow-xl">
+            <div className="w-14 h-14 rounded-full border-2 border-[#ffb800] border-t-transparent animate-spin mx-auto mb-4" />
+            <h2 className="font-display text-3xl font-bold uppercase text-[#f5efe6] leading-none mb-2">
+              WAITING FOR OPPONENT
+            </h2>
+            <p className="text-xs text-[#c8bead]">
+              {opponentName} is calling Heads or Tails...
+            </p>
+          </div>
+        )}
+
+        {/* Flipping Coin Animation */}
+        {tossing && (
+          <div className="bg-[#112217] rounded-2xl p-8 border border-[#f5efe6]/10 text-center shadow-xl">
+            <div className="text-7xl mb-4" style={{ animation: 'coin-flip 1.5s ease-out' }}>
+              🪙
+            </div>
+            <p className="font-display text-3xl uppercase tracking-wider text-[#ffb800] font-bold">
+              FLIPPING COIN IN AIR...
+            </p>
+          </div>
+        )}
+
+        {/* Phase 2: Toss Result + Bat/Bowl Decision */}
+        {tossState && tossState.winner !== 'pending' && !tossing && (
+          <div className="bg-gradient-to-b from-[#112217] to-[#0a140d] rounded-2xl p-8 border border-[#f5efe6]/10 text-center shadow-2xl">
+            
+            <div className="w-20 h-20 rounded-full mx-auto mb-4 bg-gradient-to-br from-[#ffd000] via-[#ffb800] to-[#b38000] p-1 shadow-[0_0_30px_rgba(255,184,0,0.5)] flex items-center justify-center text-4xl">
+              {tossState.result === 'heads' ? '👑' : '🪙'}
+            </div>
+
+            <span className="text-[10px] text-[#8c8273] uppercase tracking-[0.2em] font-extrabold block mb-1">
+              TOSS RESULT
+            </span>
+            <h2 className="font-display text-4xl font-bold text-[#f5efe6] uppercase leading-none mb-2">
+              IT'S {tossState.result.toUpperCase()}!
+            </h2>
+            
+            <p className="text-sm font-semibold text-[#ffb800] mb-6">
+              {isWinner ? '🎉 You won the toss!' : `${opponentName} won the toss.`}
+            </p>
+
+            {isWinner && !submittingDecision ? (
+              <div>
+                <span className="text-xs text-[#c8bead] uppercase tracking-wider font-bold block mb-3">
+                  CHOOSE YOUR MATCH STRATEGY:
+                </span>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleDecision('bat')}
+                    className="flex-1 py-3.5 px-6 rounded-xl font-display text-2xl uppercase tracking-wider font-bold bg-gradient-to-r from-[#1b4d2e] to-[#24623e] hover:from-[#24623e] hover:to-[#2e7d4c] text-white border border-[#4ade80]/40 shadow-lg transition cursor-pointer"
+                  >
+                    🏏 Bat First
+                  </button>
+                  <button
+                    onClick={() => handleDecision('bowl')}
+                    className="flex-1 py-3.5 px-6 rounded-xl font-display text-2xl uppercase tracking-wider font-bold bg-gradient-to-r from-[#d9222a] to-[#a81018] hover:from-[#ff2a36] hover:to-[#c4131b] text-white border border-white/20 shadow-lg transition cursor-pointer"
+                  >
+                    🎯 Bowl First
+                  </button>
+                </div>
+              </div>
+            ) : isWinner && submittingDecision ? (
+              <div className="flex items-center justify-center gap-2 text-[#ffb800] font-sports">
+                <div className="w-5 h-5 rounded-full border-2 border-[#ffb800] border-t-transparent animate-spin" />
+                <span>Entering Pitch Arena...</span>
+              </div>
+            ) : (
+              <div className="text-[#8c8273] font-semibold text-xs animate-pulse uppercase tracking-wider">
+                Waiting for {opponentName} to decide Bat or Bowl...
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

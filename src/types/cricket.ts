@@ -160,6 +160,8 @@ export type MatchState = {
   createdAt?: number;
   abandonedBy?: string;
   winner?: string;
+  isBotMatch?: boolean;
+  botDifficulty?: 'Rookie' | 'Pro' | 'Legend';
   /** List of spectator UIDs (future feature) */
   spectators?: string[];
   /** Unix timestamp when batting phase began */

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/useGameStore';
 import { useAuth } from '../../hooks/useAuth';
-import { Trophy, ArrowLeft, LogOut, Swords, Target, Activity, TrendingUp } from 'lucide-react';
+import { Trophy, ArrowLeft, LogOut, Swords, Target, Activity, Flame } from 'lucide-react';
 import { AudioManager } from '../../utils/audio';
 import { useState } from 'react';
 import type { CommentaryAccent } from '../../utils/audio';
@@ -29,56 +29,119 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-night-sky)] p-4 sm:p-6 overflow-y-auto">
-      <header className="flex justify-between items-center mb-6 sm:mb-10 max-w-2xl mx-auto animate-[slide-up_0.3s_ease-out]">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-400 hover:text-white transition cursor-pointer">
-          <ArrowLeft size={20} /> Back
+    <div className="min-h-screen bg-[#070c08] text-[#f5efe6] p-4 sm:p-6 lg:p-8 overflow-y-auto relative">
+      {/* Stadium Floodlight Ambiance */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div 
+          className="absolute -top-[10%] left-1/2 -translate-x-1/2 w-[800px] h-[400px]"
+          style={{
+            background: 'radial-gradient(ellipse at center, rgba(34, 92, 55, 0.25) 0%, transparent 70%)',
+            filter: 'blur(50px)',
+          }}
+        />
+      </div>
+
+      <header className="flex justify-between items-center mb-6 sm:mb-8 max-w-3xl mx-auto relative z-10">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="flex items-center gap-2 text-[#8c8273] hover:text-[#f5efe6] transition cursor-pointer text-sm font-bold uppercase tracking-wider"
+        >
+          <ArrowLeft size={18} />
+          <span>Pavilion</span>
         </button>
-        <h1 className="text-xl sm:text-2xl font-bold">Player Profile</h1>
-        <button onClick={signOut} className="flex items-center gap-2 text-red-400 hover:text-red-300 transition cursor-pointer text-sm">
-          <LogOut size={16} /> Sign Out
+
+        <h1 className="font-display text-3xl font-bold tracking-wide uppercase text-[#f5efe6]">
+          PLAYER DOSSIER
+        </h1>
+
+        <button 
+          onClick={signOut} 
+          className="flex items-center gap-1.5 text-[#ff2a36] hover:text-[#ff6b75] transition cursor-pointer text-xs font-bold uppercase tracking-wider"
+        >
+          <LogOut size={16} />
+          <span>Exit</span>
         </button>
       </header>
 
-      <main className="max-w-2xl mx-auto animate-[slide-up_0.4s_ease-out]">
-        {/* Profile Card */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-6 sm:p-8 mb-6 flex flex-col sm:flex-row items-center gap-5 sm:gap-8 shadow-xl border border-gray-700/50">
+      <main className="max-w-3xl mx-auto space-y-6 relative z-10">
+        
+        {/* Official Player Card Header */}
+        <div className="bg-gradient-to-b from-[#112217] to-[#0a140d] rounded-2xl p-6 sm:p-8 border border-[#f5efe6]/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
           <div className="relative">
-            <img src={user.photoURL} alt="Avatar" className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-green-500 shadow-lg shadow-green-500/20" />
-            <div className="absolute -bottom-1 -right-1 bg-green-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-gray-800">
+            <img 
+              src={user.photoURL} 
+              alt="Avatar" 
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border-2 border-[#ffb800] shadow-[0_0_25px_rgba(255,184,0,0.35)] object-cover bg-[#070c08]" 
+            />
+            <div className="absolute -bottom-2 -right-2 bg-[#d9222a] text-white text-[10px] font-sports font-black px-2.5 py-0.5 rounded-full border border-white/20 uppercase tracking-widest shadow-md">
               ELO {user.stats.elo ?? 1000}
             </div>
           </div>
-          <div className="text-center sm:text-left">
-            <h2 className="text-3xl sm:text-4xl font-black mb-1">{user.displayName}</h2>
-            <p className="text-gray-400 mb-3 text-sm">{user.email}</p>
-            <div className="inline-flex items-center gap-2 bg-green-900/50 text-green-400 px-4 py-2 rounded-full font-bold text-sm">
-              <Trophy size={16} /> Win Rate: {winRate}%
+
+          <div className="text-center sm:text-left flex-1">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+              <h2 className="font-display text-4xl sm:text-5xl font-bold uppercase text-[#f5efe6] leading-none">
+                {user.displayName}
+              </h2>
+              {user.isGuest && (
+                <span className="text-[10px] uppercase font-bold tracking-widest bg-[#ffb800]/20 text-[#ffb800] px-2 py-0.5 rounded border border-[#ffb800]/30">
+                  Guest Pass
+                </span>
+              )}
+            </div>
+            
+            <p className="text-[#8c8273] text-xs font-mono mb-4">{user.email || 'guest@cricketarena.internal'}</p>
+
+            <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+              <div className="inline-flex items-center gap-1.5 bg-[#1b4d2e]/40 border border-[#4ade80]/30 text-[#4ade80] px-3.5 py-1.5 rounded-xl font-sports font-bold text-xs">
+                <Trophy size={14} className="text-[#ffb800]" />
+                <span>WIN RATE: {winRate}%</span>
+              </div>
+              <div className="inline-flex items-center gap-1.5 bg-[#2a1e0b] border border-[#ffb800]/30 text-[#ffb800] px-3.5 py-1.5 rounded-xl font-sports font-bold text-xs">
+                <Flame size={14} className="text-[#ff2a36]" />
+                <span>STREAK: {user.stats.winStreak ?? 0}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <StatCard label="Matches" value={user.stats.matches} icon={<Swords className="w-4 h-4 text-blue-400" />} />
-          <StatCard label="Wins" value={user.stats.wins} icon={<Trophy className="w-4 h-4 text-green-400" />} color="text-green-400" />
-          <StatCard label="Losses" value={user.stats.losses} icon={<Target className="w-4 h-4 text-red-400" />} color="text-red-400" />
-          <StatCard label="Win Streak" value={user.stats.winStreak ?? 0} icon={<TrendingUp className="w-4 h-4 text-yellow-400" />} color="text-yellow-400" />
-          <StatCard label="Total Runs" value={user.stats.runs} icon={<Activity className="w-4 h-4 text-blue-400" />} />
-          <StatCard label="High Score" value={user.stats.highScore} />
-          <StatCard label="Wickets" value={user.stats.wickets} />
-          <StatCard label="Best Bowl" value={user.stats.bestBowling} />
+        {/* Career Telemetry Statistics Grid */}
+        <div>
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#ffb800] block mb-3">
+            CAREER MATCH TELEMETRY
+          </span>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard label="Matches Played" value={user.stats.matches} icon={<Swords className="w-4 h-4 text-[#ffb800]" />} />
+            <StatCard label="Victories" value={user.stats.wins} color="text-[#4ade80]" icon={<Trophy className="w-4 h-4 text-[#4ade80]" />} />
+            <StatCard label="Defeats" value={user.stats.losses} color="text-[#ff2a36]" icon={<Target className="w-4 h-4 text-[#ff2a36]" />} />
+            <StatCard label="Longest Streak" value={user.stats.longestWinStreak ?? user.stats.winStreak ?? 0} color="text-[#ffb800]" icon={<Flame className="w-4 h-4 text-[#ffb800]" />} />
+            <StatCard label="Total Runs" value={user.stats.runs} icon={<Activity className="w-4 h-4 text-[#f5efe6]" />} />
+            <StatCard label="Highest Score" value={user.stats.highScore} color="text-[#ffb800]" />
+            <StatCard label="Wickets Taken" value={user.stats.wickets} color="text-[#ff2a36]" />
+            <StatCard label="Best Bowling" value={user.stats.bestBowling ?? '0-0'} color="text-[#4ade80]" />
+          </div>
         </div>
 
-        {/* Audio Settings */}
-        <div className="bg-gray-800/50 rounded-2xl p-4 sm:p-6 border border-gray-700/50 mb-6">
-          <h3 className="text-base sm:text-lg font-black mb-4">Audio Settings</h3>
+        {/* Audio & Broadcast Atmosphere Settings */}
+        <div className="bg-gradient-to-b from-[#112217] to-[#0a140d] rounded-2xl p-6 border border-[#f5efe6]/10 shadow-xl space-y-6">
+          <div className="flex items-center gap-2">
+            <span className="text-xl" aria-hidden="true">🎙️</span>
+            <div>
+              <h3 className="font-display text-2xl font-bold uppercase text-[#f5efe6] leading-none">
+                BROADCAST AUDIO & COMMENTARY
+              </h3>
+              <p className="text-[10px] text-[#8c8273] font-mono mt-0.5">
+                Configure stadium atmosphere and live commentator voice
+              </p>
+            </div>
+          </div>
 
-          {/* Volume */}
-          <div className="mb-4">
+          {/* Master Volume */}
+          <div>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Master Volume</span>
-              <span className="text-sm font-bold text-white">{Math.round(volume * 100)}%</span>
+              <span className="text-xs font-bold text-[#c8bead] uppercase tracking-wider">Crowd Roar Volume</span>
+              <span className="font-sports font-bold text-sm text-[#ffb800]">{Math.round(volume * 100)}%</span>
             </div>
             <input
               type="range"
@@ -86,23 +149,24 @@ export default function Profile() {
               max="100"
               value={Math.round(volume * 100)}
               onChange={e => handleVolumeChange(Number(e.target.value) / 100)}
-              className="w-full h-2 bg-gray-700 rounded-full cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, #22c55e ${volume * 100}%, #374151 ${volume * 100}%)`,
-              }}
+              className="w-full"
             />
           </div>
 
           {/* Commentary Accent */}
           <div>
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Commentary Accent</label>
-            <div className="flex gap-2">
-              {([['en-IN', '🇮🇳 Indian'], ['en-GB', '🇬🇧 British'], ['en-AU', '🇦🇺 Aussie']] as [CommentaryAccent, string][]).map(([code, label]) => (
+            <label className="text-xs font-bold text-[#c8bead] uppercase tracking-wider mb-2.5 block">
+              Commentator Regional Accent
+            </label>
+            <div className="grid grid-cols-3 gap-2.5">
+              {([['en-IN', '🇮🇳 Indian Hindi/Eng'], ['en-GB', '🇬🇧 English Lords'], ['en-AU', '🇦🇺 Aussie MCG']] as [CommentaryAccent, string][]).map(([code, label]) => (
                 <button
                   key={code}
                   onClick={() => handleAccentChange(code)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    accent === code ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                  className={`py-3 px-3 rounded-xl font-sports text-xs font-bold transition-all cursor-pointer border ${
+                    accent === code
+                      ? 'bg-gradient-to-r from-[#1b4d2e] to-[#24623e] text-white border-[#4ade80]/50 shadow-md'
+                      : 'bg-[#122417] text-[#8c8273] border-[#f5efe6]/05 hover:bg-[#183020] hover:text-[#f5efe6]'
                   }`}
                 >
                   {label}
@@ -119,7 +183,7 @@ export default function Profile() {
 function StatCard({
   label,
   value,
-  color = 'text-white',
+  color = 'text-[#f5efe6]',
   icon,
 }: {
   label: string;
@@ -128,12 +192,14 @@ function StatCard({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="bg-gray-800/50 p-4 sm:p-5 rounded-2xl border border-gray-700/50 hover:border-gray-600 transition">
-      <div className="flex items-center gap-1.5 mb-1.5">
+    <div className="bg-gradient-to-b from-[#112217] to-[#0a140d] p-4 rounded-xl border border-[#f5efe6]/10 shadow-md hover:border-[#ffb800]/30 transition-all">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-[#8c8273] text-[10px] font-bold uppercase tracking-wider">{label}</p>
         {icon}
-        <p className="text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-wide">{label}</p>
       </div>
-      <p className={`text-2xl sm:text-3xl font-black ${color}`}>{value}</p>
+      <p className={`font-sports text-3xl font-black ${color} tabular-nums leading-tight`}>
+        {value}
+      </p>
     </div>
   );
 }

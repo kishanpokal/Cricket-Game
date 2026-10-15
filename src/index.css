@@ -1,32 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Teko:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  /* ─── Cricket-Themed Color Palette ──────────────────────────────────────── */
-  --color-pitch-green: #2d6a4f;
-  --color-pitch-green-light: #40916c;
-  --color-pitch-green-dark: #1b4332;
-  --color-soil: #3d2b1f;
-  --color-soil-light: #5c4033;
-  --color-leather-red: #c0392b;
-  --color-leather-red-dark: #922b21;
-  --color-cream: #f5f0e8;
-  --color-cream-dark: #e8dfd3;
-  --color-night-sky: #0f1923;
-  --color-night-sky-light: #1a2a3a;
-  --color-stadium-gold: #f0b429;
-  --color-stadium-silver: #9ca3af;
+  /* ─── Authentic Cricket Theme (Strict 60-30-10 Rule) ─────────────────────── */
+  /* 60% Dominant: Stadium Night & Deep Turf Charcoal */
+  --color-pitch-dark: #070c08;
+  --color-stadium-night: #0b140e;
+  --color-turf-surface: #0f1c13;
+  --color-turf-card: #132419;
+  --color-turf-border: rgba(245, 239, 230, 0.08);
 
-  /* ─── Semantic Colors ────────────────────────────────────────────────────── */
-  --color-six: #8b5cf6;
-  --color-four: #22c55e;
-  --color-wicket: #ef4444;
-  --color-dot: #6b7280;
+  /* 30% Secondary: Cricket Turf Emeralds & Pavilion Chalk/Cream */
+  --color-pitch-green: #1b4d2e;
+  --color-pitch-green-light: #287345;
+  --color-pitch-green-dark: #12351f;
+  --color-pitch-turf: #225c37;
+  --color-pitch-clay: #483424;
+  --color-pitch-crease: #f5efe6;
+  --color-cream: #f5efe6;
+  --color-cream-muted: #c8bead;
+
+  /* 10% Accent: Cricket Ball Cherry Red & Championship Trophy Gold */
+  --color-leather-red: #d9222a;
+  --color-leather-red-light: #ff2a36;
+  --color-leather-red-dark: #9e121b;
+  --color-stadium-gold: #ffb800;
+  --color-stadium-gold-light: #ffd000;
+  --color-stadium-gold-dark: #c98b00;
+
+  /* Match Semantic Outcomes */
+  --color-six: #ffb800;
+  --color-four: #10b981;
+  --color-wicket: #ff2a36;
+  --color-dot: #64748b;
   --color-noball: #f97316;
   --color-wide: #eab308;
-  --color-freehit: #3b82f6;
+  --color-freehit: #f59e0b;
 
-  /* ─── Z-Index Scale ──────────────────────────────────────────────────────── */
+  /* Typography */
+  --font-display: 'Teko', -apple-system, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-sports: 'Chakra Petch', monospace, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Z-Index Scale */
   --z-field: 0;
   --z-ui: 10;
   --z-hud: 20;
@@ -34,41 +51,43 @@
   --z-modal: 40;
   --z-toast: 50;
 
-  /* ─── Animations ─────────────────────────────────────────────────────────── */
+  /* Advanced Sports Animations */
   --animate-shimmer: shimmer 2s infinite linear;
-  --animate-spin-slow: spin 3s linear infinite;
-  --animate-pulse-ring: pulse-ring 1.5s ease-out infinite;
-  --animate-slide-up: slide-up 0.3s ease-out;
-  --animate-slide-in-right: slide-in-right 0.3s ease-out;
-  --animate-fade-in: fade-in 0.2s ease-out;
-  --animate-fade-out: fade-out 0.2s ease-out;
-  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-spin-slow: spin 4s linear infinite;
+  --animate-pulse-gold: pulse-gold 2s ease-in-out infinite;
+  --animate-pulse-red: pulse-red 2s ease-in-out infinite;
+  --animate-slide-up: slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-in-right: slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-fade-in: fade-in 0.25s ease-out;
+  --animate-scale-in: scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   --animate-score-flip: score-flip 0.4s ease-out;
-  --animate-grass-sway: grass-sway 4s ease-in-out infinite;
-  --animate-cloud-drift: cloud-drift 20s linear infinite;
-  --animate-coin-flip: coin-flip 1.5s ease-out;
-  --animate-ball-delivery: ball-delivery 0.3s ease-in;
-  --animate-wicket-shake: wicket-shake 0.4s ease-out;
-  --animate-confetti-burst: confetti-burst 1s ease-out forwards;
+  --animate-grass-sway: grass-sway 6s ease-in-out infinite;
+  --animate-floodlight-sweep: floodlight-sweep 8s ease-in-out infinite alternate;
+  --animate-ball-delivery: ball-delivery 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --animate-wicket-shake: wicket-shake 0.45s ease-out;
 
   @keyframes shimmer {
     0% { transform: translateX(-150%); }
     100% { transform: translateX(150%); }
   }
 
-  @keyframes pulse-ring {
-    0% { transform: scale(0.95); opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-    70% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); }
-    100% { transform: scale(0.95); opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  @keyframes pulse-gold {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 184, 0, 0.4); }
+    50% { box-shadow: 0 0 0 12px rgba(255, 184, 0, 0); }
+  }
+
+  @keyframes pulse-red {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(217, 34, 42, 0.5); }
+    50% { box-shadow: 0 0 0 12px rgba(217, 34, 42, 0); }
   }
 
   @keyframes slide-up {
-    from { transform: translateY(20px); opacity: 0; }
+    from { transform: translateY(16px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
   }
 
   @keyframes slide-in-right {
-    from { transform: translateX(30px); opacity: 0; }
+    from { transform: translateX(24px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
   }
 
@@ -77,100 +96,85 @@
     to { opacity: 1; }
   }
 
-  @keyframes fade-out {
-    from { opacity: 1; }
-    to { opacity: 0; }
-  }
-
   @keyframes scale-in {
-    from { transform: scale(0.8); opacity: 0; }
+    from { transform: scale(0.92); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
   }
 
   @keyframes score-flip {
     0% { transform: rotateX(0deg); }
-    50% { transform: rotateX(90deg); }
+    50% { transform: rotateX(90deg); filter: brightness(1.5); }
     100% { transform: rotateX(0deg); }
   }
 
   @keyframes grass-sway {
-    0%, 100% { filter: hue-rotate(0deg); }
-    50% { filter: hue-rotate(8deg); }
+    0%, 100% { filter: hue-rotate(0deg) brightness(1); }
+    50% { filter: hue-rotate(5deg) brightness(1.05); }
   }
 
-  @keyframes cloud-drift {
-    from { transform: translateX(-100%); }
-    to { transform: translateX(200%); }
-  }
-
-  @keyframes coin-flip {
-    0% { transform: perspective(400px) rotateY(0deg); }
-    100% { transform: perspective(400px) rotateY(1440deg); }
+  @keyframes floodlight-sweep {
+    0% { transform: rotate(-8deg) scale(1); opacity: 0.15; }
+    100% { transform: rotate(8deg) scale(1.1); opacity: 0.28; }
   }
 
   @keyframes ball-delivery {
-    from { transform: translateY(-100px) scale(0.5); opacity: 0; }
+    from { transform: translateY(-120px) scale(0.4); opacity: 0; }
+    60% { transform: translateY(10px) scale(1.1); opacity: 1; }
     to { transform: translateY(0) scale(1); opacity: 1; }
   }
 
   @keyframes wicket-shake {
     0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-    20%, 40%, 60%, 80% { transform: translateX(4px); }
+    15%, 45%, 75% { transform: translateX(-5px) rotate(-1deg); }
+    30%, 60%, 90% { transform: translateX(5px) rotate(1deg); }
   }
 
-  @keyframes confetti-burst {
-    0% { transform: translate(0, 0) scale(1); opacity: 1; }
-    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+  @keyframes bowler-runup {
+    0%, 100% { transform: translateY(0) scaleY(1); }
+    25% { transform: translateY(-8px) scaleY(1.03); }
+    50% { transform: translateY(0) scaleY(0.97); }
+    75% { transform: translateY(-8px) scaleY(1.03); }
   }
 
-  @keyframes ballResultPop {
-    0% { transform: scale(0.3); opacity: 0; }
-    30% { transform: scale(1.2); opacity: 1; }
-    50% { transform: scale(1); }
-    80% { opacity: 1; }
-    100% { opacity: 0; transform: scale(0.9) translateY(-20px); }
+  @keyframes bowler-arm-whip {
+    0% { transform: rotate(0deg); }
+    35% { transform: rotate(-45deg); }
+    75% { transform: rotate(200deg); }
+    100% { transform: rotate(250deg); }
   }
 
-  @keyframes ballEmojiBounce {
-    0% { transform: scale(0) rotate(-30deg); }
-    50% { transform: scale(1.4) rotate(10deg); }
-    100% { transform: scale(1) rotate(0); }
+  @keyframes bat-drive-swing {
+    0% { transform: rotate(-45deg) translateY(0); }
+    50% { transform: rotate(15deg) translateY(8px); }
+    100% { transform: rotate(38deg) translateY(4px); }
   }
 
-  @keyframes ballTextSlam {
-    0% { transform: scale(3); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
+  @keyframes bat-pull-swing {
+    0% { transform: rotate(35deg) translateX(0); }
+    50% { transform: rotate(-65deg) translateX(-12px); }
+    100% { transform: rotate(-90deg) translateX(-18px); }
   }
 
-  @keyframes ballSubFade {
-    0% { opacity: 0; transform: translateY(10px); }
-    100% { opacity: 1; transform: translateY(0); }
+  @keyframes bat-loft-swing {
+    0% { transform: rotate(-55deg) translateY(0); }
+    50% { transform: rotate(10deg) translateY(-8px); }
+    100% { transform: rotate(70deg) translateY(-24px); }
   }
 
-  @keyframes ballRingExpand {
-    0% { transform: scale(0.5); opacity: 1; }
-    100% { transform: scale(2.5); opacity: 0; }
+  @keyframes zing-bail-fly {
+    0% { transform: translate(0, 0) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 8px #ff2a36); }
+    50% { transform: translate(-35px, -70px) rotate(360deg); opacity: 0.95; filter: drop-shadow(0 0 16px #ff2a36); }
+    100% { transform: translate(-60px, 30px) rotate(720deg); opacity: 0.2; }
   }
 
-  @keyframes countdown-arc {
-    from { stroke-dashoffset: 0; }
-    to { stroke-dashoffset: 283; }
+  @keyframes ball-seam-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 
-  @keyframes batter-ready {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-2px) rotate(0.5deg); }
-  }
-
-  @keyframes bowler-breathe {
-    0%, 100% { transform: scale(1) translateY(0); }
-    50% { transform: scale(1.02) translateY(-1px); }
-  }
-
-  @keyframes fielder-shift {
-    0% { transform: translate(0, 0); }
-    100% { transform: translate(3px, 2px); }
+  @keyframes boundary-strobe {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
   }
 }
 
@@ -178,62 +182,78 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--color-night-sky);
-  color: white;
+  background-color: var(--color-stadium-night);
+  color: #f5efe6;
+  background-image: 
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(34, 92, 55, 0.22) 0%, transparent 70%),
+    radial-gradient(circle at 80% 20%, rgba(255, 184, 0, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 20% 80%, rgba(217, 34, 42, 0.03) 0%, transparent 40%);
+  background-attachment: fixed;
 }
 
-code {
-  font-family: 'JetBrains Mono', source-code-pro, Menlo, Monaco, Consolas, monospace;
+h1, h2, h3, .font-display {
+  font-family: 'Teko', sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-/* ─── Accessibility ───────────────────────────────────────────────────────── */
-
-*:focus-visible {
-  outline: 2px solid var(--color-freehit);
-  outline-offset: 2px;
+.font-sports {
+  font-family: 'Chakra Petch', sans-serif;
 }
 
-/* ─── Custom Range Slider ─────────────────────────────────────────────────── */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Custom Cricket Leather Range Slider ─────────────────────────────────── */
 
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   cursor: pointer;
   border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+  height: 8px;
 }
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 28px;
-  height: 28px;
-  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  width: 26px;
+  height: 26px;
+  background: radial-gradient(circle at 35% 35%, #ff2a36, #9e121b);
   border-radius: 50%;
-  border: 3px solid white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+  border: 2.5px solid #f5efe6;
+  box-shadow: 0 0 14px rgba(217, 34, 42, 0.65), 0 2px 4px rgba(0, 0, 0, 0.6);
   cursor: grab;
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 input[type="range"]::-webkit-slider-thumb:active {
   cursor: grabbing;
-  transform: scale(1.2);
+  transform: scale(1.18);
+  box-shadow: 0 0 20px rgba(255, 42, 54, 0.9);
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 28px;
-  height: 28px;
-  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  width: 26px;
+  height: 26px;
+  background: radial-gradient(circle at 35% 35%, #ff2a36, #9e121b);
   border-radius: 50%;
-  border: 3px solid white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+  border: 2.5px solid #f5efe6;
+  box-shadow: 0 0 14px rgba(217, 34, 42, 0.65);
   cursor: grab;
 }
 
-/* ─── Aria-live region for screen readers ─────────────────────────────────── */
+/* ─── Focus & Accessibility ──────────────────────────────────────────────── */
+
+*:focus-visible {
+  outline: 2px solid var(--color-stadium-gold);
+  outline-offset: 2px;
+}
 
 .sr-only {
   position: absolute;
@@ -247,7 +267,7 @@ input[type="range"]::-moz-range-thumb {
   border-width: 0;
 }
 
-/* ─── Scrollbar Styling ───────────────────────────────────────────────────── */
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
   width: 6px;
@@ -255,14 +275,14 @@ input[type="range"]::-moz-range-thumb {
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #070c08;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
+  background: rgba(245, 239, 230, 0.18);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 184, 0, 0.4);
 }

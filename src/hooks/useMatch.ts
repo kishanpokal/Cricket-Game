@@ -8,6 +8,8 @@ import {
   isPowerplayOver,
   isDeathOver,
   calculateRunRate,
+  generateBotAction,
+  getBotRecommendedBowlType,
 } from '../services/aiLogic';
 import { subscribeToMatch } from '../services/matchService';
 import type { BallAction, MatchState, InningsState, ShotType, BowlType, Line, Length } from '../types/cricket';
@@ -32,6 +34,9 @@ export const useMatch = (matchId: string | null) => {
 
   // Single reset timeout ref — prevents competing resets
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Bot action lock ref
+  const botActionPendingRef = useRef(false);
 
   useEffect(() => { matchStateRef.current = matchState; }, [matchState]);
   useEffect(() => { userRef.current = user; }, [user]);
@@ -61,23 +66,25 @@ export const useMatch = (matchId: string | null) => {
       const isBattingPhase = matchState.status === 'batting';
       
       if (isBattingPhase) {
-        // Delay reset by 1.5s to allow BallResultOverlay to show
+        // Delay reset by 3.6s to allow full cinematic delivery & celebration to play
         resetTimeoutRef.current = setTimeout(() => {
           myActionRef.current = null;
           setMyAction(null);
           processingRef.current = false;
           submitLockRef.current = false;
+          botActionPendingRef.current = false;
           setBallReady(true);
           setBallPhase('idle');
           resetTimeoutRef.current = null;
           console.log('[useMatch] UI Reset triggered by totalBalls increment');
-        }, 1500);
+        }, 3600);
       } else {
         // Immediate reset during breaks
         myActionRef.current = null;
         setMyAction(null);
         processingRef.current = false;
         submitLockRef.current = false;
+        botActionPendingRef.current = false;
         setBallReady(true);
         setBallPhase('idle');
       }
@@ -455,6 +462,44 @@ export const useMatch = (matchId: string | null) => {
     }
   }, [matchState?.status]);
 
+  // ─── Bot Bowl Type Auto-Selection ──────────────────────────────────
+  useEffect(() => {
+    if (!matchId || !matchState?.isBotMatch || matchState.status !== 'batting') return;
+
+    const isInnings1 = !matchState.innings2;
+    const isP1BattingInnings1 = matchState.player1.role === 'bat';
+    const isBotBatting = isInnings1 ? !isP1BattingInnings1 : isP1BattingInnings1;
+    const isBotBowling = !isBotBatting;
+
+    if (!isBotBowling) return;
+
+    const inningsKey = isInnings1 ? 'innings1' : 'innings2';
+    const currentInnings = matchState[inningsKey];
+
+    if (currentInnings && !currentInnings.currentBowlType) {
+      const recommendedBowl = getBotRecommendedBowlType(
+        matchState.pitch,
+        matchState.weather,
+        matchState.botDifficulty
+      );
+      console.log('[useMatch] Bot auto-selecting bowl type for over:', recommendedBowl);
+      update(ref(rtdb, `matches/${matchId}/${inningsKey}`), {
+        currentBowlType: recommendedBowl,
+      }).catch(console.error);
+    }
+  }, [
+    matchId,
+    matchState?.isBotMatch,
+    matchState?.status,
+    matchState?.innings1?.currentBowlType,
+    matchState?.innings2?.currentBowlType,
+    matchState?.innings1?.overs,
+    matchState?.innings2?.overs,
+    matchState?.pitch,
+    matchState?.weather,
+    matchState?.botDifficulty,
+  ]);
+
   // Listen for actions — SINGLE listener
   useEffect(() => {
     if (!matchId || !user) return;
@@ -486,6 +531,7 @@ export const useMatch = (matchId: string | null) => {
         // Actions cleared — opponent action is now definitely null.
         // UI reset for myAction and ballReady is handled by totalBalls listener.
         setOpponentAction(null);
+        botActionPendingRef.current = false;
         return;
       }
 
@@ -499,11 +545,64 @@ export const useMatch = (matchId: string | null) => {
         setOpponentAction(opSubmitted);
       }
 
-      // ─── Watchdog: auto-submit for missing player after 30s ──────────
+      // ─── Bot Action Generation ───────────────────────────────────────
+      if (currentMatchState.isBotMatch && !actions.p2 && !botActionPendingRef.current) {
+        botActionPendingRef.current = true;
+        const botDelay = Math.floor(Math.random() * 300) + 700; // 700ms - 1000ms delay
+        setTimeout(async () => {
+          const latestMatch = matchStateRef.current;
+          if (!latestMatch || latestMatch.status !== 'batting' || !matchId) {
+            botActionPendingRef.current = false;
+            return;
+          }
+
+          const isInnings1 = !latestMatch.innings2;
+          const isP1BattingInnings1 = latestMatch.player1.role === 'bat';
+          const isBotBatting = isInnings1 ? !isP1BattingInnings1 : isP1BattingInnings1;
+          const inningsKey = isInnings1 ? 'innings1' : 'innings2';
+          const currentInnings = latestMatch[inningsKey];
+          const maxOvers = latestMatch.format === 'T20' ? 20 : latestMatch.format === 'ODI' ? 50 : latestMatch.customOvers;
+
+          let bowlType = currentInnings?.currentBowlType;
+          if (!isBotBatting && !bowlType) {
+            bowlType = getBotRecommendedBowlType(latestMatch.pitch, latestMatch.weather, latestMatch.botDifficulty);
+          }
+
+          const botAction = generateBotAction(
+            isBotBatting,
+            latestMatch.botDifficulty,
+            latestMatch.pitch,
+            latestMatch.weather,
+            {
+              overs: currentInnings?.overs ?? 0,
+              balls: currentInnings?.balls ?? 0,
+              score: currentInnings?.score ?? 0,
+              wickets: currentInnings?.wickets ?? 0,
+              target: latestMatch.innings1 && !isInnings1 ? latestMatch.innings1.score + 1 : undefined,
+              isFreeHit: currentInnings?.isFreeHitNextBall,
+              currentBowlType: bowlType,
+              maxOvers,
+              p1Action: actions?.p1,
+            }
+          );
+
+          console.log('[useMatch] Bot auto-submitting move as p2:', botAction);
+          try {
+            await update(ref(rtdb, `matches/${matchId}/actions`), {
+              p2: { ...botAction, submitTime: Date.now() },
+            });
+          } catch (err) {
+            console.error('[useMatch] Bot action submission failed:', err);
+            botActionPendingRef.current = false;
+          }
+        }, botDelay);
+      }
+
+      // ─── Watchdog: auto-submit for missing player after 16s (PvP only) ──
       const hasP1 = !!actions.p1;
       const hasP2 = !!actions.p2;
 
-      if ((hasP1 && !hasP2) || (!hasP1 && hasP2)) {
+      if (!currentMatchState.isBotMatch && ((hasP1 && !hasP2) || (!hasP1 && hasP2))) {
         watchdog = setTimeout(() => {
           const missingKey = hasP1 ? 'p2' : 'p1';
           const isMissingPlayerBatting = currentMatchState.innings1?.battingTeam === (missingKey === 'p1' ? currentMatchState.player1.uid : currentMatchState.player2?.uid);
@@ -527,16 +626,15 @@ export const useMatch = (matchId: string | null) => {
         }, 16000);
       }
 
-      // ─── If both submitted, the LAST player to submit processes the ball ──────
-      // This ensures the player whose browser is active handles the computation,
-      // avoiding deadlocks if Player 1 is backgrounded or disconnected.
+      // ─── If both submitted, process the ball ─────────────────────────
+      // In bot matches, Player 1 is ALWAYS the designated processor immediately!
+      // In PvP, the last player to submit processes the ball.
       if (hasP1 && hasP2 && !processingRef.current) {
         const p1Time = actions.p1.submitTime || 0;
         const p2Time = actions.p2.submitTime || 0;
         
-        // If p1 submitted after p2 (or same time), p1 processes. Otherwise p2 processes.
         const p1IsLast = p1Time >= p2Time;
-        const shouldProcess = isPlayer1 ? p1IsLast : !p1IsLast;
+        const shouldProcess = currentMatchState.isBotMatch ? isPlayer1 : (isPlayer1 ? p1IsLast : !p1IsLast);
 
         if (shouldProcess) {
           processingRef.current = true;

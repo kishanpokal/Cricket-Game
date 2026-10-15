@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import type { BallAction, BowlType, Line, Length } from '../../types/cricket';
-import { Zap } from 'lucide-react';
+import { Crosshair } from 'lucide-react';
 import { getBowlingSpeed } from '../../services/aiLogic';
 import { AudioManager } from '../../utils/audio';
 
@@ -8,13 +8,11 @@ interface BowlingUIProps {
   onSubmit: (action: BallAction) => void;
   ballReady: boolean;
   bouncersBowledInOver: number;
-  /** Current ball number in the over (1-6). When 1, it's a new over — ask for bowl type */
   currentBallInOver: number;
   currentBowlType?: string;
   onSelectBowlType?: (type: BowlType) => void;
 }
 
-/** Pitch zone maps Line + Length simultaneously */
 interface PitchZone {
   line: Line;
   length: Length;
@@ -26,24 +24,23 @@ interface PitchZone {
 }
 
 const PITCH_ZONES: PitchZone[] = [
-  // Short row (top of pitch)
+  // Short row
   { line: 'Outside Off', length: 'Short', label: 'Short Off', x: 0, y: 0, w: 33, h: 25 },
   { line: 'Middle', length: 'Short', label: 'Short Mid', x: 33, y: 0, w: 34, h: 25 },
   { line: 'Leg', length: 'Short', label: 'Short Leg', x: 67, y: 0, w: 33, h: 25 },
-  // Good Length row (middle)
+  // Good Length row
   { line: 'Outside Off', length: 'Good Length', label: 'Good Off', x: 0, y: 25, w: 33, h: 30 },
   { line: 'Middle', length: 'Good Length', label: 'Good Mid', x: 33, y: 25, w: 34, h: 30 },
   { line: 'Leg', length: 'Good Length', label: 'Good Leg', x: 67, y: 25, w: 33, h: 30 },
-  // Full + Yorker row (bottom)
+  // Full & Yorker row
   { line: 'Outside Off', length: 'Full', label: 'Full Off', x: 0, y: 55, w: 33, h: 20 },
   { line: 'Middle', length: 'Yorker', label: 'Yorker', x: 33, y: 55, w: 34, h: 20 },
   { line: 'Leg', length: 'Full', label: 'Full Leg', x: 67, y: 55, w: 33, h: 20 },
-  // Wide zones (sides)
+  // Outliers
   { line: 'Wide', length: 'Good Length', label: 'Wide', x: -12, y: 25, w: 12, h: 30 },
   { line: 'Off Stump', length: 'Good Length', label: 'Off Stump', x: 16, y: 25, w: 17, h: 30 },
 ];
 
-// Bouncer is a special zone at top
 const BOUNCER_ZONE: PitchZone = {
   line: 'Middle', length: 'Bouncer', label: 'Bouncer', x: 15, y: -15, w: 70, h: 15,
 };
@@ -57,40 +54,31 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
   const [submitted, setSubmitted] = useState(false);
   const lastTimerWarning = useRef(0);
 
-  // Last 6 balls radar dots
-  const [radarDots] = useState<Array<{ x: number; y: number }>>([]);
-
   const bouncerDisabled = bouncersBowledInOver >= 2;
 
-  // Sync with server state
   useEffect(() => {
     if (currentBowlType) {
       setBowlTypeLockedForOver(true);
       setBowlType(currentBowlType as BowlType);
-    } else if (currentBallInOver === 0) { // 0 is start of over
+    } else if (currentBallInOver === 0) {
       setBowlTypeLockedForOver(false);
     }
   }, [currentBowlType, currentBallInOver]);
 
-  // Reset on new ball — but bowl type stays locked for the over
   useEffect(() => {
     if (ballReady) {
       setSubmitted(false);
       setSelectedZone(null);
       setTimer(15);
       setTimeLeft(15);
-      
-      // If it's the first ball of a new over, unlock bowl type so user can pick
       if (currentBallInOver === 0 && !currentBowlType) {
         setBowlTypeLockedForOver(false);
       }
     }
   }, [ballReady, currentBallInOver, currentBowlType]);
 
-  // Timer countdown with requestAnimationFrame
   useEffect(() => {
     if (submitted) return;
-    // Don't start timer if bowl type not locked yet (user needs to pick first)
     if (!bowlTypeLockedForOver) return;
 
     const startTime = Date.now();
@@ -138,7 +126,6 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
 
   const handleAutoSubmitRef = useRef(() => {});
   handleAutoSubmitRef.current = () => {
-    // Auto-submit with random defaults if timer runs out and no zone selected
     let finalZone = selectedZoneRef.current;
     const finalBowlType = bowlTypeRef.current;
     
@@ -159,7 +146,6 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
 
   const handleSubmit = useCallback(() => {
     if (!selectedZone) {
-      // If no zone selected, use default
       handleFinalSubmit(bowlType, 'Off Stump', 'Good Length');
     } else {
       handleFinalSubmit(bowlType, selectedZone.line, selectedZone.length);
@@ -174,149 +160,146 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
     }
   }, [onSelectBowlType]);
 
-  // ── Bowl Type Selection Screen (shown at start of each over) ──
+  // Screen 1: New Over Style Selector
   if (!bowlTypeLockedForOver && !submitted) {
     return (
       <div
-        className="w-full bg-gradient-to-br from-gray-900/95 to-gray-800/95 p-4 sm:p-6 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.15)] border border-red-500/20 backdrop-blur-xl"
+        className="w-full bg-[#0b140e] p-5 sm:p-6 rounded-2xl shadow-2xl border border-[#ffb800]/30 backdrop-blur-xl"
         role="group"
-        aria-label="Select bowling type for this over"
+        aria-label="Select bowling discipline"
       >
-        <div className="text-center mb-4">
-          <div className="bg-red-600/20 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 border border-red-500/30">
-            <span className="text-2xl" aria-hidden="true">🎯</span>
+        <div className="text-center mb-5">
+          <div className="w-12 h-12 rounded-xl bg-[#1b4d2e]/40 border border-[#ffb800]/40 flex items-center justify-center mx-auto mb-2 text-2xl shadow-md">
+            🎯
           </div>
-          <h3 className="text-sm sm:text-base font-black text-white tracking-wide uppercase">New Over</h3>
-          <p className="text-[9px] sm:text-xs text-red-400/80 font-bold tracking-wider mt-1">
-            SELECT BOWLING TYPE FOR THIS OVER
+          <h3 className="font-display text-3xl font-bold uppercase text-[#f5efe6] leading-none">
+            NEW OVER • CHOOSE DISCIPLINE
+          </h3>
+          <p className="text-[11px] text-[#ffb800] font-sports font-semibold uppercase tracking-wider mt-1">
+            LOCKED FOR ALL 6 BALLS OF THIS OVER
           </p>
         </div>
 
-        <div className="space-y-2">
+        <div className="grid grid-cols-3 gap-3">
           {(['Pace', 'Spin', 'Swing'] as BowlType[]).map(t => (
             <button
               key={t}
               onClick={() => handleBowlTypeSelect(t)}
-              className="w-full py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base uppercase tracking-widest transition-all duration-200 cursor-pointer bg-gray-800/80 text-gray-300 border border-gray-700 hover:bg-gradient-to-br hover:from-red-500 hover:to-red-700 hover:text-white hover:shadow-[0_4px_20px_rgba(239,68,68,0.4)] hover:border-red-400/50 flex items-center justify-center gap-3"
+              className="py-4 px-3 rounded-xl font-display text-xl sm:text-2xl uppercase tracking-wider font-bold transition-all cursor-pointer bg-[#122417] text-[#f5efe6] border border-[#f5efe6]/10 hover:border-[#ffb800]/50 hover:bg-[#1a3824] hover:shadow-[0_4px_20px_rgba(255,184,0,0.25)] flex flex-col items-center justify-center gap-1 group"
             >
-              <span className="text-xl">{t === 'Pace' ? '🔥' : t === 'Spin' ? '🌀' : '💨'}</span>
+              <span className="text-2xl group-hover:scale-110 transition-transform">
+                {t === 'Pace' ? '🔥' : t === 'Spin' ? '🌀' : '💨'}
+              </span>
               <span>{t}</span>
-              <span className="text-[10px] sm:text-xs opacity-60 ml-1">{getBowlingSpeed(t)}</span>
+              <span className="text-[10px] text-[#8c8273] font-mono font-normal">
+                {getBowlingSpeed(t)}
+              </span>
             </button>
           ))}
         </div>
-
-        <p className="text-[9px] text-gray-500 text-center mt-3">
-          This bowling type will be used for the entire over
-        </p>
       </div>
     );
   }
 
+  // Screen 2: Waiting for Batter to React
   if (submitted) {
     return (
-      <div className="w-full bg-gradient-to-br from-gray-900 to-gray-800 p-4 sm:p-5 rounded-xl text-center shadow-[0_0_40px_rgba(239,68,68,0.3)] border border-gray-700/50 backdrop-blur-xl">
-        <div className="flex justify-center mb-2">
-          <div className="w-8 h-8 rounded-full border-2 border-red-400 border-t-transparent animate-spin" />
+      <div className="w-full bg-[#0b140e] p-5 rounded-2xl text-center border border-[#1b4d2e] shadow-2xl backdrop-blur-xl">
+        <div className="flex justify-center mb-3">
+          <div className="w-8 h-8 rounded-full border-2 border-[#ff2a36] border-t-transparent animate-spin" />
         </div>
-        <h3 className="text-base sm:text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-300 uppercase tracking-wider">
-          Waiting for Batter
+        <h3 className="font-display text-2xl font-bold uppercase text-[#ff2a36] tracking-wider leading-none">
+          DELIVERY RELEASED
         </h3>
-        <p className="text-gray-500 mt-1 text-[10px] sm:text-xs">
-          {bowlType} — {selectedZone?.label ?? 'Randomizing...'}
-          <span className="ml-2 text-gray-600">{getBowlingSpeed(bowlType)}</span>
+        <p className="text-[#c8bead] text-xs font-mono mt-1">
+          {bowlType} • {selectedZone?.label ?? 'Target Locked'} • {getBowlingSpeed(bowlType)}
         </p>
       </div>
     );
   }
 
-  // Timer
   const timerProgress = timeLeft / 15;
   const circumference = 2 * Math.PI * 22;
   const strokeOffset = circumference * (1 - timerProgress);
 
   return (
     <div
-      className="w-full bg-gradient-to-br from-gray-900/95 to-gray-800/95 p-3 sm:p-5 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.15)] border border-red-500/20 backdrop-blur-xl"
+      className="w-full bg-gradient-to-b from-[#0b140e] to-[#070c08] p-3 sm:p-4 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.85)] border border-[#f5efe6]/10"
       role="group"
-      aria-label="Bowling controls"
+      aria-label="Bowling targeter"
     >
       {/* Header */}
-      <div className="flex justify-between items-center mb-1.5 sm:mb-3">
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <div className="bg-red-600/20 p-1 rounded-lg border border-red-500/30">
-            <span className="text-sm sm:text-base" aria-hidden="true">🎯</span>
+      <div className="flex justify-between items-center mb-2 sm:mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-[#d9222a]/20 border border-[#ff2a36]/30 flex items-center justify-center text-lg">
+            🎯
           </div>
           <div>
-            <h3 className="text-xs sm:text-sm font-black text-white tracking-wide uppercase">Bowling</h3>
-            <p className="text-[7px] sm:text-[9px] text-red-400/80 font-bold tracking-wider">
-              TAP A ZONE & BOWL
-            </p>
+            <h3 className="font-display text-xl font-bold uppercase text-[#f5efe6] leading-none">
+              BOWLER'S RUN-UP
+            </h3>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[10px] text-[#ffb800] font-sports font-semibold uppercase tracking-wider">
+                {bowlType} ({getBowlingSpeed(bowlType)})
+              </span>
+              <span className="text-[9px] text-[#8c8273] uppercase font-mono">
+                • Bouncers Left: {Math.max(0, 2 - bouncersBowledInOver)}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Circular timer */}
-        <div className="relative w-10 h-10 sm:w-12 sm:h-12" aria-label={`${timer} seconds remaining`}>
+        {/* Timer */}
+        <div className="relative w-11 h-11" aria-label={`${timer} seconds remaining`}>
           <svg className="w-full h-full -rotate-90" viewBox="0 0 48 48">
-            <circle cx="24" cy="24" r="22" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
+            <circle cx="24" cy="24" r="22" fill="none" stroke="rgba(245,239,230,0.1)" strokeWidth="3.5" />
             <circle
               cx="24" cy="24" r="22"
               fill="none"
-              stroke={timer <= 2 ? '#ef4444' : '#ef4444'}
-              strokeWidth="3"
+              stroke={timer <= 2 ? '#ff2a36' : '#ffb800'}
+              strokeWidth="3.5"
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={strokeOffset}
-              style={{ transition: 'stroke 0.3s ease' }}
+              style={{ transition: 'stroke 0.25s ease' }}
             />
           </svg>
-          <div className={`absolute inset-0 flex items-center justify-center font-mono text-sm sm:text-base font-black ${timer <= 2 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
+          <div className={`absolute inset-0 flex items-center justify-center font-sports text-base font-black ${timer <= 2 ? 'text-[#ff2a36] animate-pulse' : 'text-[#f5efe6]'}`}>
             {timer}
           </div>
         </div>
       </div>
 
-      {/* Bowl type indicator (locked for this over) */}
-      <div className="flex items-center justify-center gap-2 mb-2 sm:mb-3 py-1.5 bg-red-500/10 rounded-lg border border-red-500/20">
-        <span className="text-sm">{bowlType === 'Pace' ? '🔥' : bowlType === 'Spin' ? '🌀' : '💨'}</span>
-        <span className="text-xs sm:text-sm font-bold text-red-400 uppercase tracking-wider">{bowlType} Over</span>
-        <span className="text-[8px] text-gray-500">(locked)</span>
-      </div>
-
-      {/* Pitch map SVG */}
-      <div className="relative bg-[var(--color-soil)] rounded-xl p-1 sm:p-3 border border-[var(--color-soil-light)] mb-2 sm:mb-3">
-        <div className="relative w-full max-w-[280px] mx-auto" style={{ paddingBottom: '70%' }}>
+      {/* High-Precision Pitch Radar Targeter SVG */}
+      <div className="relative bg-[#070c08] rounded-xl p-2 sm:p-3 border border-[#f5efe6]/10 mb-3 shadow-inner">
+        <div className="relative w-full max-w-[280px] mx-auto" style={{ paddingBottom: '68%' }}>
           <svg
             viewBox="-15 -20 130 120"
             className="absolute inset-0 w-full h-full"
             role="group"
-            aria-label="Pitch map - select bowling zone"
+            aria-label="Pitch radar map"
           >
-            {/* Pitch background */}
-            <rect x="0" y="0" width="100" height="80" rx="4" fill="#c8a96e" opacity="0.3" />
+            {/* Clay Turf Ground */}
+            <rect x="0" y="0" width="100" height="80" rx="3" fill="#2d2217" opacity="0.6" />
+            <rect x="0" y="0" width="100" height="80" rx="3" fill="none" stroke="#f5efe6" strokeWidth="0.4" opacity="0.2" />
 
-            {/* Stump lines */}
-            <line x1="35" y1="78" x2="65" y2="78" stroke="white" strokeWidth="1.5" opacity="0.5" />
-            <line x1="35" y1="2" x2="65" y2="2" stroke="white" strokeWidth="1.5" opacity="0.5" />
-            {/* Stump markers */}
+            {/* Creases (Popping & Bowling) in Crisp White */}
+            <line x1="20" y1="72" x2="80" y2="72" stroke="#f5efe6" strokeWidth="0.75" opacity="0.8" />
+            <line x1="20" y1="8" x2="80" y2="8" stroke="#f5efe6" strokeWidth="0.75" opacity="0.8" />
+
+            {/* Stumps */}
             {[40, 50, 60].map(x => (
-              <line key={`s1-${x}`} x1={x} y1="76" x2={x} y2="80" stroke="white" strokeWidth="2" opacity="0.6" />
+              <line key={`s1-${x}`} x1={x} y1="76" x2={x} y2="80" stroke="#ffb800" strokeWidth="1.8" />
             ))}
             {[40, 50, 60].map(x => (
-              <line key={`s2-${x}`} x1={x} y1="0" x2={x} y2="4" stroke="white" strokeWidth="2" opacity="0.6" />
+              <line key={`s2-${x}`} x1={x} y1="0" x2={x} y2="4" stroke="#ffb800" strokeWidth="1.8" />
             ))}
 
-            {/* Crease lines */}
-            <line x1="20" y1="72" x2="80" y2="72" stroke="white" strokeWidth="0.5" opacity="0.3" />
-            <line x1="20" y1="8" x2="80" y2="8" stroke="white" strokeWidth="0.5" opacity="0.3" />
-
-            {/* Bouncer zone */}
+            {/* Bouncer Zone */}
             <g
               onClick={() => !bouncerDisabled && handleZoneSelect(BOUNCER_ZONE)}
-              className={bouncerDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}
+              className={bouncerDisabled ? 'cursor-not-allowed opacity-30' : 'cursor-pointer'}
               role="button"
-              aria-label={`Bouncer zone${bouncerDisabled ? ' (limit reached)' : ''}`}
-              aria-disabled={bouncerDisabled}
             >
               <rect
                 x={BOUNCER_ZONE.x}
@@ -324,24 +307,25 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
                 width={BOUNCER_ZONE.w}
                 height={BOUNCER_ZONE.h}
                 rx="3"
-                fill={bouncerDisabled ? '#374151' : selectedZone === BOUNCER_ZONE ? '#ef4444' : '#7c3aed'}
-                opacity={bouncerDisabled ? 0.3 : selectedZone === BOUNCER_ZONE ? 0.8 : 0.4}
-                stroke={selectedZone === BOUNCER_ZONE ? 'white' : 'transparent'}
-                strokeWidth="1.5"
+                fill={selectedZone === BOUNCER_ZONE ? '#d9222a' : '#1b4d2e'}
+                opacity={selectedZone === BOUNCER_ZONE ? 0.9 : 0.5}
+                stroke={selectedZone === BOUNCER_ZONE ? '#ffb800' : 'rgba(245,239,230,0.2)'}
+                strokeWidth={selectedZone === BOUNCER_ZONE ? 1.5 : 0.5}
               />
               <text
                 x={BOUNCER_ZONE.x + BOUNCER_ZONE.w / 2}
-                y={BOUNCER_ZONE.y + BOUNCER_ZONE.h / 2 + 3}
+                y={BOUNCER_ZONE.y + BOUNCER_ZONE.h / 2 + 2.5}
                 textAnchor="middle"
-                fill={bouncerDisabled ? '#4b5563' : 'white'}
-                fontSize="6"
+                fill="#f5efe6"
+                fontSize="5"
+                fontFamily="Chakra Petch"
                 fontWeight="bold"
               >
-                {bouncerDisabled ? 'MAX 2' : 'BOUNCER'}
+                {bouncerDisabled ? 'BOUNCER (LIMIT MET)' : 'BOUNCER CORRIDOR'}
               </text>
             </g>
 
-            {/* Main pitch zones (excluding Wide and Off Stump which are overlaid differently) */}
+            {/* Pitch Zones */}
             {PITCH_ZONES.filter(z => z.line !== 'Wide' && z.line !== 'Off Stump').map((zone, i) => {
               const isSelected = selectedZone?.label === zone.label;
               return (
@@ -350,82 +334,67 @@ export default memo(function BowlingUI({ onSubmit, ballReady, bouncersBowledInOv
                   onClick={() => handleZoneSelect(zone)}
                   className="cursor-pointer"
                   role="button"
-                  aria-label={`${zone.label} zone`}
-                  aria-pressed={isSelected}
                 >
                   <rect
                     x={zone.x}
                     y={zone.y}
                     width={zone.w}
                     height={zone.h}
-                    fill={isSelected ? '#ef4444' : '#22c55e'}
-                    opacity={isSelected ? 0.7 : 0.15}
-                    stroke={isSelected ? 'white' : 'rgba(255,255,255,0.2)'}
-                    strokeWidth={isSelected ? '1.5' : '0.5'}
-                    rx="1"
+                    fill={isSelected ? '#d9222a' : '#122417'}
+                    opacity={isSelected ? 0.85 : 0.35}
+                    stroke={isSelected ? '#ffb800' : 'rgba(245,239,230,0.15)'}
+                    strokeWidth={isSelected ? 1.5 : 0.4}
+                    rx="1.5"
                   />
                   <text
                     x={zone.x + zone.w / 2}
-                    y={zone.y + zone.h / 2 + 2.5}
+                    y={zone.y + zone.h / 2 + 1}
                     textAnchor="middle"
-                    fill={isSelected ? 'white' : 'rgba(255,255,255,0.6)'}
+                    fill={isSelected ? '#ffffff' : '#c8bead'}
                     fontSize="5"
+                    fontFamily="Chakra Petch"
                     fontWeight="bold"
                   >
                     {zone.label.split(' ')[0]}
                   </text>
                   <text
                     x={zone.x + zone.w / 2}
-                    y={zone.y + zone.h / 2 + 8}
+                    y={zone.y + zone.h / 2 + 6.5}
                     textAnchor="middle"
-                    fill={isSelected ? 'white' : 'rgba(255,255,255,0.4)'}
+                    fill={isSelected ? '#ffb800' : '#8c8273'}
                     fontSize="4"
+                    fontFamily="Chakra Petch"
                   >
                     {zone.label.split(' ')[1] || ''}
                   </text>
                 </g>
               );
             })}
-
-            {/* Radar dots (last 6 balls) */}
-            {radarDots.map((dot, i) => (
-              <circle
-                key={i}
-                cx={dot.x}
-                cy={dot.y}
-                r="2.5"
-                fill="#ef4444"
-                opacity={0.3 + (i / radarDots.length) * 0.5}
-                stroke="white"
-                strokeWidth="0.5"
-              />
-            ))}
           </svg>
         </div>
 
-        {/* Zone hint */}
-        <div className="text-center mt-1">
-          <p className="text-[9px] sm:text-[10px] text-gray-400 font-semibold">
+        {/* Selected zone readout */}
+        <div className="text-center mt-1.5">
+          <p className="text-[10px] text-[#c8bead] font-sports font-semibold">
             {selectedZone ? (
-              <span className="text-white">{selectedZone.label} — {selectedZone.line}, {selectedZone.length}</span>
+              <span className="text-[#ffb800] uppercase">
+                TARGET: {selectedZone.label} ({selectedZone.line} • {selectedZone.length})
+              </span>
             ) : (
-              'Tap a zone on the pitch to select line & length'
+              'TAP PITCH TO DESIGNATE LINE & LENGTH TARGET'
             )}
           </p>
         </div>
       </div>
 
-      {/* Bowl Delivery button */}
+      {/* Bowl Action Button */}
       <button
         onClick={handleSubmit}
-        className="w-full relative overflow-hidden group bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-500 hover:to-orange-400 py-2 sm:py-3 rounded-lg font-black text-sm sm:text-base text-white uppercase tracking-widest shadow-[0_8px_25px_rgba(239,68,68,0.4)] hover:shadow-[0_8px_35px_rgba(239,68,68,0.6)] transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer"
-        aria-label={`Bowl ${bowlType} delivery to ${selectedZone?.label ?? 'Good Off'}`}
+        className="w-full relative overflow-hidden group bg-gradient-to-r from-[#d9222a] to-[#a81018] hover:from-[#ff2a36] hover:to-[#c4131b] py-3 rounded-xl font-display text-2xl uppercase tracking-widest font-bold text-white shadow-[0_8px_24px_rgba(217,34,42,0.45)] transition-all cursor-pointer flex items-center justify-center gap-2"
+        aria-label="Release delivery"
       >
-        <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-        <span className="relative z-10 flex items-center justify-center gap-2">
-          Bowl Delivery
-          <Zap className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
-        </span>
+        <span>RELEASE DELIVERY</span>
+        <Crosshair className="w-5 h-5 text-[#ffb800]" aria-hidden="true" />
       </button>
     </div>
   );

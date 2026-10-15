@@ -5,9 +5,9 @@ interface LeaveConfirmDialogProps {
   label?: string;
 }
 
-export default function LeaveConfirmDialog({ onConfirm, label = 'Leave Match' }: LeaveConfirmDialogProps) {
+export default function LeaveConfirmDialog({ onConfirm, label = 'Retire / Leave' }: LeaveConfirmDialogProps) {
   const [showDialog, setShowDialog] = useState(false);
-  const [confirmStep, setConfirmStep] = useState(0); // 0 = hidden, 1 = first confirm, 2 = final confirm
+  const [confirmStep, setConfirmStep] = useState(0);
 
   const handleLeaveClick = () => {
     setShowDialog(true);
@@ -33,35 +33,35 @@ export default function LeaveConfirmDialog({ onConfirm, label = 'Leave Match' }:
     <>
       <button
         onClick={handleLeaveClick}
-        className="px-4 py-2 bg-red-900/60 hover:bg-red-800 text-red-300 rounded-lg text-sm font-semibold transition border border-red-700/50 cursor-pointer"
+        className="px-3.5 py-1.5 bg-[#2a1215] hover:bg-[#3d181c] text-[#ff2a36] rounded-xl text-xs font-bold uppercase tracking-wider transition border border-[#ff2a36]/30 cursor-pointer shadow-sm"
       >
         {label}
       </button>
 
       {showDialog && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl border border-gray-700">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-b from-[#112217] to-[#0a140d] rounded-2xl p-6 sm:p-8 max-w-sm w-full shadow-2xl border border-[#f5efe6]/10 text-center animate-[scale-in_0.25s_ease-out]">
             {confirmStep === 1 && (
               <>
-                <div className="text-center mb-6">
-                  <div className="text-5xl mb-4">⚠️</div>
-                  <h2 className="text-2xl font-bold text-white mb-2">Leave Match?</h2>
-                  <p className="text-gray-400">
-                    If you leave, your opponent will win the match by forfeit. This action cannot be undone.
-                  </p>
-                </div>
+                <div className="text-5xl mb-3">⚠️</div>
+                <h2 className="font-display text-4xl font-bold text-[#f5efe6] uppercase leading-none mb-2">
+                  FORFEIT MATCH?
+                </h2>
+                <p className="text-[#c8bead] text-xs leading-relaxed mb-6">
+                  Leaving the match awards victory to your opponent by default. Your rating may be impacted.
+                </p>
                 <div className="flex gap-3">
                   <button
                     onClick={handleCancel}
-                    className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-bold text-white transition cursor-pointer"
+                    className="flex-1 py-3 bg-[#16271c] hover:bg-[#1e3827] rounded-xl font-display text-xl uppercase tracking-wider font-bold text-[#f5efe6] transition cursor-pointer border border-[#f5efe6]/10"
                   >
-                    Stay
+                    Stay on Pitch
                   </button>
                   <button
                     onClick={handleFirstConfirm}
-                    className="flex-1 py-3 bg-red-600 hover:bg-red-500 rounded-xl font-bold text-white transition cursor-pointer"
+                    className="flex-1 py-3 bg-[#d9222a] hover:bg-[#ff2a36] rounded-xl font-display text-xl uppercase tracking-wider font-bold text-white transition cursor-pointer shadow-lg"
                   >
-                    Yes, Leave
+                    Leave
                   </button>
                 </div>
               </>
@@ -69,26 +69,25 @@ export default function LeaveConfirmDialog({ onConfirm, label = 'Leave Match' }:
 
             {confirmStep === 2 && (
               <>
-                <div className="text-center mb-6">
-                  <div className="text-5xl mb-4">🚪</div>
-                  <h2 className="text-2xl font-bold text-red-400 mb-2">Are you sure?</h2>
-                  <p className="text-gray-400">
-                    This is your <span className="text-red-400 font-bold">final confirmation</span>. 
-                    You will <span className="text-red-400 font-bold">forfeit</span> the match and it will count as a loss.
-                  </p>
-                </div>
+                <div className="text-5xl mb-3">🚪</div>
+                <h2 className="font-display text-4xl font-bold text-[#ff2a36] uppercase leading-none mb-2">
+                  FINAL CONFIRMATION
+                </h2>
+                <p className="text-[#c8bead] text-xs leading-relaxed mb-6">
+                  Are you certain? This will immediately register a forfeit defeat on your profile.
+                </p>
                 <div className="flex gap-3">
                   <button
                     onClick={handleCancel}
-                    className="flex-1 py-3 bg-green-600 hover:bg-green-500 rounded-xl font-bold text-white transition cursor-pointer"
+                    className="flex-1 py-3 bg-gradient-to-r from-[#1b4d2e] to-[#24623e] hover:from-[#24623e] hover:to-[#2e7d4c] rounded-xl font-display text-xl uppercase tracking-wider font-bold text-white transition cursor-pointer border border-[#4ade80]/30 shadow-md"
                   >
-                    No, Keep Playing
+                    Keep Playing
                   </button>
                   <button
                     onClick={handleFinalConfirm}
-                    className="flex-1 py-3 bg-red-700 hover:bg-red-600 rounded-xl font-bold text-white transition cursor-pointer"
+                    className="flex-1 py-3 bg-[#9e121b] hover:bg-[#d9222a] rounded-xl font-display text-xl uppercase tracking-wider font-bold text-white transition cursor-pointer shadow-md"
                   >
-                    Forfeit Match
+                    Forfeit
                   </button>
                 </div>
               </>

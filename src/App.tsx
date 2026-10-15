@@ -14,9 +14,9 @@ const Leaderboard = lazy(() => import('./components/Leaderboard'));
 
 function LoadingFallback() {
   return (
-    <div className="h-screen w-screen flex flex-col items-center justify-center bg-[var(--color-night-sky)] text-white">
-      <div className="w-12 h-12 rounded-full border-2 border-green-400 border-t-transparent animate-spin mb-4" />
-      <p className="text-gray-400 font-semibold text-sm">Loading...</p>
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#070c08] text-[#f5efe6]">
+      <div className="w-12 h-12 rounded-full border-2 border-[#ffb800] border-t-transparent animate-spin mb-4" />
+      <p className="font-display text-2xl uppercase tracking-wider text-[#ffb800]">ENTERING STADIUM...</p>
     </div>
   );
 }

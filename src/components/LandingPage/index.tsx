@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import './LandingPage.css';
 
 interface LandingPageProps {
@@ -6,7 +6,6 @@ interface LandingPageProps {
   onGuestPlay: () => void;
 }
 
-// Particle data type
 interface Particle {
   id: number;
   left: string;
@@ -16,60 +15,61 @@ interface Particle {
   color: string;
 }
 
-const FEATURES = [
-  { icon: '🏏', title: 'Real-Time PvP', desc: 'Play live multiplayer cricket matches against friends or global opponents in real-time.', colorClass: 'green' },
-  { icon: '🎯', title: 'Smart Bowling', desc: 'Master swing, spin and pace with an intelligent bowling system featuring bouncers and no-balls.', colorClass: 'blue' },
-  { icon: '🏆', title: 'Leaderboards', desc: 'Climb the global rankings, earn trophies and showcase your cricket domination.', colorClass: 'gold' },
-  { icon: '⚡', title: 'Super Overs', desc: 'Tied match? Battle it out in a thrilling Super Over to decide the ultimate winner.', colorClass: 'purple' },
-  { icon: '🎮', title: 'Power Shots', desc: 'Time your power meter perfectly to unleash devastating sixes and boundaries.', colorClass: 'red' },
-  { icon: '📊', title: 'Live Stats', desc: 'Track every run, wicket and milestone with beautiful real-time scorecards.', colorClass: 'cyan' },
+const TACTICAL_FEATURES = [
+  {
+    icon: '⚡',
+    title: 'Precision Seam & Swing',
+    desc: 'Manipulate aerodynamic swing in overcast skies or exploit sharp seam movement on green tops. 145+ km/h pace meets tactical deception.',
+    index: '01'
+  },
+  {
+    icon: '🎯',
+    title: 'Timing & Sweet Spot',
+    desc: 'Dynamic power gauge with millimeter timing. Strike with pure defensive control or unleash maximum power into the second tier.',
+    index: '02'
+  },
+  {
+    icon: '🏆',
+    title: 'Multiplayer Arena & Super Overs',
+    desc: 'Instant real-time PvP synchronization. If scores finish level after 20 overs, battle in an electric, nerve-shredding Super Over.',
+    index: '03'
+  },
+  {
+    icon: '🏟️',
+    title: 'Global Pitch Physics',
+    desc: 'Battle across iconic grounds: Lord’s green grass, Wankhede’s batting paradise, MCG’s extreme bounce, and Eden Gardens turn.',
+    index: '04'
+  },
+  {
+    icon: '📊',
+    title: 'Broadcast Telemetry',
+    desc: 'Live TV-grade scoreboards, wagon wheels, projected run-rates, bowler speed radar, and comprehensive career batting averages.',
+    index: '05'
+  },
+  {
+    icon: '🤝',
+    title: 'Custom Pavilion Rooms',
+    desc: 'Generate private pavilion codes in seconds. Choose match format from lightning 5-over shootouts to full 20-over tactical contests.',
+    index: '06'
+  },
 ];
 
-const SHOWCASE_ITEMS = [
-  '🏟️ Stunning stadium environments with dynamic weather',
-  '🎵 Immersive crowd sounds and commentary effects',
-  '🔥 Free Hit mechanics after no-balls',
-  '📱 Fully responsive — play on any device',
-  '👥 Private rooms with custom over formats',
+const PITCH_TYPES_SHOWCASE = [
+  { icon: '🌿', name: 'Green Top', stadium: "Lord's / Gabba", effect: 'Extra seam movement & bounce' },
+  { icon: '🏜️', name: 'Dusty Turn', stadium: 'Eden Gardens / Chepauk', effect: 'Deadly spin & low bounce' },
+  { icon: '🪨', name: 'Hard Deck', stadium: 'MCG / Perth', effect: 'True carry & high-speed boundary value' },
+  { icon: '🏏', name: 'Batting Paradise', stadium: 'Wankhede / Chinnaswamy', effect: 'Fast outfield & high scores' },
 ];
 
 export default function LandingPage({ onPlay, onGuestPlay }: LandingPageProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [particles] = useState<Particle[]>(() => generateParticles(30));
-  const revealRefs = useRef<(HTMLElement | null)[]>([]);
+  const [particles] = useState<Particle[]>(() => generateParticles(24));
 
-  const addRevealRef = useCallback((el: HTMLElement | null) => {
-    if (el && !revealRefs.current.includes(el)) {
-      revealRefs.current.push(el);
-    }
-  }, []);
-
-  // Scroll handler for navbar
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
+    const handleScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Intersection observer for scroll reveal
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-          }
-        });
-      },
-      { threshold: 0.15 }
-    );
-
-    revealRefs.current.forEach((el) => {
-      if (el) observer.observe(el);
-    });
-
-    return () => observer.disconnect();
   }, []);
 
   const scrollToSection = (id: string) => {
@@ -79,7 +79,7 @@ export default function LandingPage({ onPlay, onGuestPlay }: LandingPageProps) {
 
   return (
     <div className="landing-page">
-      {/* Animated Background */}
+      {/* Stadium Night Atmosphere Background */}
       <div className="landing-bg">
         <div className="landing-grid" />
         {particles.map((p) => (
@@ -99,106 +99,141 @@ export default function LandingPage({ onPlay, onGuestPlay }: LandingPageProps) {
         ))}
       </div>
 
-      {/* Navbar */}
+      {/* Broadcast Sports Navigation */}
       <nav className={`landing-nav ${scrolled ? 'scrolled' : ''}`}>
-        <div className="nav-logo">
-          <div className="logo-icon">🏏</div>
-          <span className="logo-text">SUPER CRICKET</span>
+        <div className="nav-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <div className="brand-crest">🏏</div>
+          <div className="brand-text">
+            <span className="brand-title">SUPER CRICKET</span>
+            <span className="brand-subtitle">PREMIER ARENA</span>
+          </div>
         </div>
 
-        <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
+        <button 
+          className="menu-toggle" 
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Toggle navigation"
+        >
           {menuOpen ? '✕' : '☰'}
         </button>
 
         <div className={`nav-links ${menuOpen ? 'open' : ''}`}>
-          <button className="nav-link" onClick={() => scrollToSection('features')}>Features</button>
-          <button className="nav-link" onClick={() => scrollToSection('showcase')}>Gameplay</button>
-          <button className="nav-link" onClick={() => scrollToSection('cta')}>Community</button>
-          <button className="nav-link nav-cta" onClick={onPlay}>Play Now</button>
+          <button className="nav-link" onClick={() => scrollToSection('features')}>Tactics</button>
+          <button className="nav-link" onClick={() => scrollToSection('pitches')}>Pitches</button>
+          <button className="nav-link" onClick={() => scrollToSection('showcase')}>Atmosphere</button>
+          <button className="nav-link" onClick={() => scrollToSection('cta')}>Play Online</button>
+          <button className="nav-cta-btn" onClick={onPlay}>
+            <span>ENTER ARENA</span>
+            <span aria-hidden="true">→</span>
+          </button>
         </div>
       </nav>
 
       {/* Hero Section */}
       <section className="hero-section">
-        <div className="hero-content">
+        <div className="hero-grid">
           <div className="hero-text">
-            <div className="hero-badge">
-              <span className="badge-dot" />
-              LIVE MULTIPLAYER
+            <div className="broadcast-badge">
+              <span className="live-pulse" />
+              <span>SOLO VS AI BOT • 1V1 MULTIPLAYER • REAL-TIME CRICKET</span>
             </div>
 
-            <h1 className="hero-title">
-              <span className="title-line">UNLEASH YOUR</span>
-              <span className="title-line title-gradient">CRICKET FURY</span>
+            <h1 className="hero-headline">
+              <span>UNLEASH PURE</span>
+              <span className="headline-accent"> CRICKET GLORY</span>
+              <span className="headline-sub">SOLO AI BOT • 1V1 PVP • FLOODLIT ARENAS</span>
             </h1>
 
-            <p className="hero-subtitle">
-              Experience the most thrilling multiplayer cricket game on the web.
-              Real-time PvP battles, stunning visuals, and heart-pounding Super Overs await.
+            <p className="hero-description">
+              Step out of the pavilion onto the world’s most competitive browser cricket pitch.
+              Play instantly against intelligent AI bots or duel your friends in real-time under stadium lights.
             </p>
 
             <div className="hero-actions">
-              <button className="btn-primary" onClick={onPlay}>
-                ⚡ Start Playing
+              <button className="btn-primary-action" onClick={onPlay}>
+                <span>🏏 Enter Match Pavilion</span>
               </button>
-              <button className="btn-secondary" onClick={onGuestPlay}>
-                👤 Play as Guest
+              <button className="btn-secondary-action" onClick={onGuestPlay}>
+                <span>🤖 Instant Guest Pass</span>
               </button>
+            </div>
+
+            <div className="hero-stats-ribbon">
+              <div className="stat-item">
+                <span className="stat-val">SOLO & PVP</span>
+                <span className="stat-lbl">AI BOT OR FRIENDS</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-val">3 AI LEVELS</span>
+                <span className="stat-lbl">ROOKIE • PRO • LEGEND</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-val">6+ FORMATS</span>
+                <span className="stat-lbl">T20 • ODI • SUPER OVER</span>
+              </div>
             </div>
           </div>
 
+          {/* Hero Visual: Sports Stage with Live Broadcast Card */}
           <div className="hero-visual">
-            <div className="hero-image-container">
-              <img src="/hero-bg.png" alt="Super Cricket Gameplay" />
-              <div className="hero-image-overlay" />
+            <div className="stadium-stage">
+              <img 
+                src="https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1200&q=80" 
+                alt="Floodlit cricket stadium at night" 
+              />
+              <div className="stadium-overlay" />
+
+              {/* Simulated Match Telemetry */}
+              <div className="broadcast-hud">
+                <div className="hud-team-info">
+                  <span className="hud-pill">LIVE INN 2</span>
+                  <span className="hud-score">184/3</span>
+                  <span className="hud-overs">(18.4 OVERS)</span>
+                </div>
+                <div className="hud-req">
+                  NEED 12 RUNS • 8 BALLS
+                </div>
+              </div>
             </div>
 
-            <div className="floating-element float-1">
-              <span className="float-icon">🏏</span>
-              <span>
-                <span className="float-value">6!</span>
-                <span className="float-label">MAXIMUM</span>
-              </span>
+            {/* Floating Sports Accents */}
+            <div className="floating-badge badge-pos-1">
+              <div className="badge-icon-box badge-icon-gold">🏆</div>
+              <div>
+                <div className="badge-val">98.4%</div>
+                <div className="badge-sub">BATTING STRIKE RATE</div>
+              </div>
             </div>
 
-            <div className="floating-element float-2">
-              <span className="float-icon">🔥</span>
-              <span>
-                <span className="float-value">WICKET!</span>
-                <span className="float-label">BOWLED</span>
-              </span>
-            </div>
-
-            <div className="floating-element float-3">
-              <span className="float-icon">⭐</span>
-              <span>
-                <span className="float-value">MVP</span>
-                <span className="float-label">AWARDED</span>
-              </span>
+            <div className="floating-badge badge-pos-2">
+              <div className="badge-icon-box badge-icon-red">⚡</div>
+              <div>
+                <div className="badge-val">148.5 KM/H</div>
+                <div className="badge-sub">INSWINGING YORKER</div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Tactical Playbook Section */}
       <section className="features-section" id="features">
-        <div className="section-header reveal" ref={addRevealRef}>
-          <div className="section-tag">WHY PLAY</div>
-          <h2 className="section-title">Next-Level Cricket Gaming</h2>
+        <div className="section-header">
+          <span className="section-tag">TACTICAL PLAYBOOK</span>
+          <h2 className="section-title">Engineered for True Cricket Purists</h2>
           <p className="section-desc">
-            Every feature is crafted to deliver the most realistic and exciting cricket experience ever built for the web.
+            No robotic arcade randomness. Every delivery, edge, lofted drive, and run-out is calculated
+            using pitch physics, bowler angle, and batter release timing.
           </p>
         </div>
 
         <div className="features-grid">
-          {FEATURES.map((f, i) => (
-            <div
-              key={i}
-              className="feature-card reveal"
-              ref={addRevealRef}
-              style={{ transitionDelay: `${i * 0.1}s` }}
-            >
-              <div className={`feature-icon ${f.colorClass}`}>{f.icon}</div>
+          {TACTICAL_FEATURES.map((f, i) => (
+            <div key={i} className="feature-card">
+              <div className="feature-header">
+                <div className="feature-icon-wrapper">{f.icon}</div>
+                <span className="feature-index">{f.index}</span>
+              </div>
               <h3 className="feature-title">{f.title}</h3>
               <p className="feature-desc">{f.desc}</p>
             </div>
@@ -206,67 +241,113 @@ export default function LandingPage({ onPlay, onGuestPlay }: LandingPageProps) {
         </div>
       </section>
 
-      {/* Showcase Section */}
+      {/* Pitch Conditions & Stadiums */}
+      <section className="showcase-section" id="pitches">
+        <div className="section-header">
+          <span className="section-tag">STADIUM TELEMETRY</span>
+          <h2 className="section-title">Authentic Pitch & Weather Mechanics</h2>
+          <p className="section-desc">
+            Match conditions drastically reshape tactics. Adapt your shot selection to surface friction and atmospheric moisture.
+          </p>
+        </div>
+
+        <div className="pitch-conditions-bar">
+          {PITCH_TYPES_SHOWCASE.map((p, i) => (
+            <div key={i} className="pitch-pill">
+              <div className="pitch-pill-icon">{p.icon}</div>
+              <div>
+                <div className="pitch-pill-title">{p.name}</div>
+                <div className="pitch-pill-sub">{p.stadium}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Dual Showcase: Batting & Bowling Mastery */}
       <section className="showcase-section" id="showcase">
         <div className="showcase-grid">
-          <div className="showcase-image reveal" ref={addRevealRef}>
-            <img src="/batsman-action.png" alt="Batsman in action" />
+          <div className="showcase-image-card">
+            <img 
+              src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=1200&q=80" 
+              alt="Batsman executing a stroke" 
+            />
           </div>
-          <div className="showcase-content reveal" ref={addRevealRef}>
-            <div className="section-tag">THE EXPERIENCE</div>
-            <h2 className="section-title">Built for Cricket Fans</h2>
+
+          <div className="showcase-content">
+            <span className="section-tag">THE BATSMAN'S CREED</span>
+            <h2 className="section-title">Dominate the 360° Field</h2>
             <p className="section-desc">
-              From the roar of the crowd to the precision of every delivery, Super Cricket captures the soul of the sport.
+              Whether threading the cover gap off the back foot or dispatching a short ball over deep square leg,
+              every shot requires precision footwork and clean timing.
             </p>
-            <ul className="showcase-list">
-              {SHOWCASE_ITEMS.map((item, i) => (
-                <li key={i}>
-                  <span className="list-check">✓</span>
-                  {item}
-                </li>
-              ))}
+
+            <ul className="showcase-checklist">
+              <li className="showcase-item">
+                <span className="check-bullet">✓</span>
+                <span><strong>7 Distinct Shot Types:</strong> Defensive block, Cover Drive, Cut, Pull, Sweep, Slog, and Straight Loft.</span>
+              </li>
+              <li className="showcase-item">
+                <span className="check-bullet">✓</span>
+                <span><strong>Tactical Power Gauge:</strong> Balance safe placement into gaps against all-or-nothing boundary hitting.</span>
+              </li>
+              <li className="showcase-item">
+                <span className="check-bullet">✓</span>
+                <span><strong>Free Hit Protection:</strong> Punish no-balls with fearless aggression without danger of being bowled or caught.</span>
+              </li>
             </ul>
           </div>
         </div>
       </section>
 
-      {/* Second Showcase (reversed) */}
+      {/* Bowling Mastery Showcase */}
       <section className="showcase-section">
         <div className="showcase-grid" style={{ direction: 'rtl' }}>
-          <div className="showcase-image reveal" ref={addRevealRef} style={{ direction: 'ltr' }}>
-            <img src="/bowler-action.png" alt="Bowler in action" />
+          <div className="showcase-image-card" style={{ direction: 'ltr' }}>
+            <img 
+              src="https://images.unsplash.com/photo-1624526267942-ab0ff8a3e972?auto=format&fit=crop&w=1200&q=80" 
+              alt="Cricket ball with seam on grass" 
+            />
           </div>
-          <div className="showcase-content reveal" ref={addRevealRef} style={{ direction: 'ltr' }}>
-            <div className="section-tag">COMPETITIVE</div>
-            <h2 className="section-title">Dominate the Pitch</h2>
+
+          <div className="showcase-content" style={{ direction: 'ltr' }}>
+            <span className="section-tag">THE BOWLER'S ART</span>
+            <h2 className="section-title">Outfox Batters with Seam & Spin</h2>
             <p className="section-desc">
-              Master every format from T20 blitz to ODI marathons. Outsmart your opponent with strategy and skill.
+              Set batsmen up with consistent fourth-stump line before slipping through an unplayable toe-crusher or a sharp bouncer.
             </p>
-            <ul className="showcase-list">
-              <li><span className="list-check">✓</span>🎯 Precision bowling with swing and spin mechanics</li>
-              <li><span className="list-check">✓</span>⚡ Power meter timing for devastating shot placement</li>
-              <li><span className="list-check">✓</span>🏆 T20, ODI, and custom over formats available</li>
-              <li><span className="list-check">✓</span>🤝 Challenge friends with private room codes</li>
+
+            <ul className="showcase-checklist">
+              <li className="showcase-item">
+                <span className="check-bullet">✓</span>
+                <span><strong>12-Zone Pitch Targeter:</strong> Pinpoint Yorker, Good Length, Short, and corridor of uncertainty.</span>
+              </li>
+              <li className="showcase-item">
+                <span className="check-bullet">✓</span>
+                <span><strong>Bouncer Limits & Pressure:</strong> 2 bouncers allowed per over — use them strategically to back the batsman up.</span>
+              </li>
+              <li className="showcase-item">
+                <span className="check-bullet">✓</span>
+                <span><strong>Smart Radar History:</strong> Track the batsman's weakness over the previous 6 balls to plan the dismissal.</span>
+              </li>
             </ul>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Call to Action */}
       <section className="cta-section" id="cta">
-        <div className="cta-box reveal" ref={addRevealRef}>
-          <h2 className="cta-title">
-            Ready to Hit a <span className="title-gradient">Six</span>?
-          </h2>
+        <div className="cta-box">
+          <h2 className="cta-title">Ready for Your Match Winning Innings?</h2>
           <p className="cta-desc">
-            Join thousands of cricket fans in the ultimate online cricket experience. Free to play, no downloads required.
+            No downloads. No waiting rooms. Step directly onto the pitch and challenge rivals from across the globe in real-time.
           </p>
-          <div className="cta-buttons">
-            <button className="btn-primary" onClick={onPlay}>
-              🚀 Play with Google
+          <div className="cta-buttons-wrap">
+            <button className="btn-primary-action" onClick={onPlay}>
+              🏏 Enter Stadium Now
             </button>
-            <button className="btn-secondary" onClick={onGuestPlay}>
-              👤 Continue as Guest
+            <button className="btn-secondary-action" onClick={onGuestPlay}>
+              👤 Quick Guest Play
             </button>
           </div>
         </div>
@@ -274,11 +355,11 @@ export default function LandingPage({ onPlay, onGuestPlay }: LandingPageProps) {
 
       {/* Footer */}
       <footer className="landing-footer">
-        <span className="footer-text">© 2026 Super Cricket. All rights reserved.</span>
+        <span>© 2026 Super Cricket Championship. All rights reserved.</span>
         <div className="footer-links">
-          <button className="footer-link" onClick={() => scrollToSection('features')}>Features</button>
-          <button className="footer-link" onClick={() => scrollToSection('showcase')}>Gameplay</button>
-          <button className="footer-link" onClick={() => scrollToSection('cta')}>Community</button>
+          <button className="footer-link" onClick={() => scrollToSection('features')}>Tactics</button>
+          <button className="footer-link" onClick={() => scrollToSection('pitches')}>Pitches</button>
+          <button className="footer-link" onClick={() => scrollToSection('showcase')}>Showcase</button>
         </div>
       </footer>
     </div>
@@ -286,13 +367,19 @@ export default function LandingPage({ onPlay, onGuestPlay }: LandingPageProps) {
 }
 
 function generateParticles(count: number): Particle[] {
-  const colors = ['rgba(0, 255, 136, 0.6)', 'rgba(0, 212, 255, 0.5)', 'rgba(255, 215, 0, 0.4)'];
+  // Sports lighting particles: turf emerald, warm pavilion gold, leather red spark
+  const colors = [
+    'rgba(74, 222, 128, 0.4)',
+    'rgba(255, 184, 0, 0.35)',
+    'rgba(217, 34, 42, 0.3)',
+    'rgba(245, 239, 230, 0.25)'
+  ];
   return Array.from({ length: count }, (_, i) => ({
     id: i,
     left: `${Math.random() * 100}%`,
-    size: Math.random() * 4 + 2,
-    duration: `${Math.random() * 10 + 8}s`,
-    delay: `${Math.random() * 10}s`,
+    size: Math.random() * 3.5 + 1.5,
+    duration: `${Math.random() * 12 + 10}s`,
+    delay: `${Math.random() * 8}s`,
     color: colors[Math.floor(Math.random() * colors.length)],
   }));
 }
